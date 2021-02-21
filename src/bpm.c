@@ -3,8 +3,27 @@
 #include <LPC2478.h>
 #include "var.h"
 
+#define MODBUS
+
 #define TXPIN	(1<<19)				//порт 0.19
 #define RXPIN	(1<<26)				//порт 4.26
+
+
+#ifdef MODBUS
+	#define R_STAT	9				//длина ответа на чтение двух регистров
+	#define R_REQ	7				// длина ответа на запрос чтения из 1 регистра
+	#define R_3_REQ	(ui8)(13)		// длина ответа на запрос чтения из 3 регистров
+	#define W_REQ	(ui8)(8)		// длинна ответа на запись в любое количество регистров
+#else
+	#define R_REQ	(ui8)(11+1)		// длина ответа на запрос чтения из 1 или 2 регистров
+	#define R_3_REQ	(ui8)(13)		// длина ответа на запрос чтения из 3 регистров
+	#define W_REQ	(ui8)(5+1)		// длинна ответа на запись в любое количество регистров
+#endif
+
+
+
+
+
 
 
 static void bpm_req_init(ui8 n)
@@ -36,6 +55,31 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 	{
 		bpm_req_init(W_REQ);
 
+		bpm_req_init(W_REQ);
+
+#ifdef MODBUS
+		ui16_Un Crc;
+
+		TxBuf[0]=0x10;					//адрес по умолчанию
+		TxBuf[1]=0x10;					//код операции
+		TxBuf[2]=0;						//начальный адрес ст. всегда ==0
+		TxBuf[3]=1;						//начальный адрес мл.
+		TxBuf[4]=0;						//кол-во рег. ст. всегда ==0
+		TxBuf[5]=1;						//кол-во рег. мл.
+		TxBuf[6]=2;						//длина блока данных
+		TxBuf[7]=0;						//данные ст. ==0
+		TxBuf[8]=s.Par.b[0];				//данные мл.
+
+		Crc.Val=mbfCRC(9,TxBuf);
+
+		TxBuf[9]=Crc.b[0];
+		TxBuf[10]=Crc.b[1];
+
+		for(int i=0;i<11;i++) U2THR=TxBuf[i];
+#else
+
+
+
 		U2THR=s.Adr;					//заполняем стек передатчика
 		U2THR='W';
 		U2THR=8;
@@ -49,12 +93,12 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 		U2THR=s.Pz.b[0];
 		U2THR=s.Pz.b[1];
 		U2THR=(0-(s.Adr+'W'+8+1+3+s.Iz.b[0]+s.Iz.b[1]+s.Uz.b[0]+s.Uz.b[1]+s.Pz.b[0]+s.Pz.b[1]));				//
-
+#endif
 		s.Req=false;					//однократно
 		s.Rsp=true;						//ожидаем прием
 		s.RspTimeOut=50;				//это время (в тиках Tmr0) ожидаем завершение приёма
 		s.TmrReq=false;
-//		s.Error=255;					//сброс кода ошибки*
+		s.Error=255;					//сброс кода ошибки*
 //		s.ReqNum=3;						//*
 		flSPIEnd=false;
 	}
@@ -63,6 +107,27 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 	{
 		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
 		{
+#ifdef MODBUS
+			ui16_Un Crc;
+
+//			RxBuf[8]=RxBuf[6];
+//			RxBuf[10]=RxBuf[7];
+
+			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+
+//			RxBuf[9]=Crc.b[0];
+//			RxBuf[11]=Crc.b[1];
+
+//			Debug=1;
+
+			if(Crc.b[0]==RxBuf[RxByteWait-2])// && Crc.b[1]==RxBuf[RxByteWait-1])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
+			}
+
+
+#else
 
 			Sum=0;
 			for(int i=0;i<RxByteWait-1;i++)
@@ -114,6 +179,7 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 //					for(;;){}				>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> переход куда-нибудь
 				}
 			}
+#endif
 			s.Upd=true;					//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
@@ -162,8 +228,28 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 {
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
-		bpm_req_init(R_REQ);
 
+
+#ifdef MODBUS
+		ui16_Un Crc;
+
+		bpm_req_init(R_STAT);			//ожидаемое количество байт в ответе
+
+		TxBuf[0]=0x10;					//адрес по умолчанию
+		TxBuf[1]=0x04;					//код операции
+		TxBuf[2]=0;						//начальный адрес ст. всегда ==0
+		TxBuf[3]=0;						//начальный адрес мл.
+		TxBuf[4]=0;						//кол-во рег. ст. всегда ==0
+		TxBuf[5]=2;						//кол-во рег. мл.
+
+		Crc.Val=mbfCRC(6,TxBuf);
+
+		TxBuf[6]=Crc.b[0];
+		TxBuf[7]=Crc.b[1];
+
+		for(int i=0;i<8;i++) U2THR=TxBuf[i];
+#else
+		bpm_req_init(R_REQ);
 		U2THR=s.Adr;						//заполняет буфер передатчика
 		U2THR=0x52;
 		U2THR=0x02;
@@ -171,6 +257,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 		U2THR=0x06;
 		U2THR=0x06;
 		U2THR=0xA1;
+#endif
 
 		s.Req=false;					//однократно
 		s.Rsp=true;						//ожидаем прием
@@ -183,8 +270,35 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 
 	if(s.Rsp)
 	{
-		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
+		Debug=0;
+
+		RxBuf[11]=RxByteNum;
+
+
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
 		{
+#ifdef MODBUS
+			ui16_Un Crc;
+
+			Crc.Val=mbfCRC(RxByteWait-2,RxBuf);		//отсекаем два байта кс
+
+			RxBuf[9]=Crc.b[0];
+			RxBuf[10]=Crc.b[1];
+
+
+
+			Debug=1;
+
+			if(Crc.b[0]==RxBuf[RxByteWait-2])		// && Crc.b[1]==RxBuf[RxByteWait-1])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
+					s.St.b[0]=RxBuf[RxByteWait-5];			// DD1
+					s.St.b[1]=RxBuf[RxByteWait-3];			// DD2
+
+			}
+#else
+
 			Sum=0;
 			for(int i=0;i<RxByteWait-1;i++)
 			{
@@ -204,8 +318,10 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 				//принято правильное количесво байт с неправильной КС
 				s.Error=1;
 			}
-			s.Rsp=false;
-			s.Upd=true;
+#endif
+//			s.Rsp=false;
+//			s.Upd=true;
+
 		}
 		else
 		{
@@ -246,10 +362,27 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 //чтение уставок или текущих значений
 BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для текучки n=1;
 {
-	if(s.Req)							// запускаем цикл UART на БПМ
+	if(s.Req)								// запускаем цикл UART на БПМ
 	{
-		bpm_req_init(R_3_REQ);			//получаем данные от трёх регистров
+		bpm_req_init(R_REQ);				//получаем данные от одного регистра
 
+#ifdef MODBUS
+		ui16_Un Crc;
+
+		TxBuf[0]=0x10;						//адрес по умолчанию
+		TxBuf[1]=0x03;						//код операции
+		TxBuf[2]=0x00;						//начальный адрес ст. всегда ==0
+		TxBuf[3]=0x01;						//начальный адрес мл.
+		TxBuf[4]=0x00;						//кол-во рег. ст. всегда ==0
+		TxBuf[5]=0x01;						//кол-во рег. мл.
+
+		Crc.Val=mbfCRC(6,TxBuf);
+
+		TxBuf[6]=Crc.b[0];
+		TxBuf[7]=Crc.b[1];
+
+		for(int i=0;i<8;i++) U2THR=TxBuf[i];
+#else
 		U2THR=s.Adr;					//заполняем стек передатчика
 		U2THR='R';
 		U2THR=2;
@@ -267,7 +400,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 			U2THR=9;
 			U2THR=(0-(s.Adr+'R'+2+7+9));	//
 		}
-
+#endif
 
 		s.Req=false;					//однократно
 		s.Rsp=true;						//ожидаем прием
@@ -279,8 +412,30 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 
 	if(s.Rsp)
 	{
-		if(RxByteNum==RxByteWait+1)			//отслеживаем, когда придет всё
+		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
 		{
+#ifdef MODBUS
+			ui16_Un Crc;
+
+//			RxBuf[8]=RxBuf[6];
+//			RxBuf[10]=RxBuf[7];
+
+			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+
+//			RxBuf[9]=Crc.b[0];
+//			RxBuf[11]=Crc.b[1];
+
+//			Debug=1;
+
+			if(Crc.b[0]==RxBuf[RxByteWait-2])// && Crc.b[1]==RxBuf[RxByteWait-1])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
+					s.ParRd.b[0]=RxBuf[4];
+			}
+
+
+#else
 			Sum=0;
 
 			for(int i=0;i<RxByteWait;i++)
@@ -345,6 +500,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 //					for(;;){}				>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> переход куда-нибудь
 				}
 			}
+#endif
 			s.Upd=true;					//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
@@ -382,13 +538,36 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
  * на 1 и заново формируем пакет. При исчерпании количества попыток ставим флаг  и выходим из приема.
  */
 
+
 BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 {
+
+
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
 		bpm_req_init(W_REQ);
 
-		U2THR=s.Adr;					//заполняет буфер передатчика
+#ifdef MODBUS
+		ui16_Un Crc;
+
+		TxBuf[0]=0x10;					//адрес по умолчанию
+		TxBuf[1]=0x10;					//код операции
+		TxBuf[2]=0;						//начальный адрес ст. всегда ==0
+		TxBuf[3]=0;						//начальный адрес мл.
+		TxBuf[4]=0;						//кол-во рег. ст. всегда ==0
+		TxBuf[5]=1;						//кол-во рег. мл.
+		TxBuf[6]=2;						//длина блока данных
+		TxBuf[7]=0;						//данные ст. ==0
+		TxBuf[8]=par;					//данные мл.
+
+		Crc.Val=mbfCRC(9,TxBuf);
+
+		TxBuf[9]=Crc.b[0];
+		TxBuf[10]=Crc.b[1];
+
+		for(int i=0;i<11;i++) U2THR=TxBuf[i];
+#else
+		U2THR=s.Adr;					//заполняем буфер передатчика
 		U2THR='W';
 		U2THR=6;
 		U2THR=0;
@@ -399,20 +578,43 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 		U2THR=cmd;
 		U2THR=par;
 		U2THR=(0-(s.Adr+'W'+6+cmd+par+cmd+par));
-
+#endif
 		s.Req=false;					//однократная передача
 		s.Rsp=true;						//ожидаем прием
 		s.RspTimeOut=50;				//это время (в тиках Tmr0) ожидаем завершение приёма
-//		s.Error=255;					//сброс кода ошибки*
+		s.Error=255;					//сброс кода ошибки*
 //		s.ReqNum=3;						//*
 		flSPIEnd=false;
 	}
 
 	if(s.Rsp)
 	{
+
+		Debug=0;
+
 		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
 		{
+#ifdef MODBUS
+			ui16_Un Crc;
 
+//			RxBuf[8]=RxBuf[6];
+//			RxBuf[10]=RxBuf[7];
+
+			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+
+//			RxBuf[9]=Crc.b[0];
+//			RxBuf[11]=Crc.b[1];
+
+//			Debug=1;
+
+			if(Crc.b[0]==RxBuf[RxByteWait-2])// && Crc.b[1]==RxBuf[RxByteWait-1])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
+			}
+
+
+#else
 			Sum=0;
 			for(int i=0;i<RxByteWait-1;i++)
 			{
@@ -448,6 +650,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 				}
 
 			}
+#endif
 			s.Upd=true;					//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
@@ -522,3 +725,5 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 
 		}
 */
+
+
