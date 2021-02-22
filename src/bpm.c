@@ -21,12 +21,7 @@
 #endif
 
 
-
-
-
-
-
-static void bpm_req_init(ui8 n)
+static void req_init(ui8 n)
 {
 	for(int i=0;i<63;i++)			//сброс буфера приемника
 	{
@@ -47,15 +42,206 @@ static void bpm_req_init(ui8 n)
 }
 
 
+MPU_Struct mpu_get_op(MPU_Struct s)
+{
+
+	if(s.Req)								// запускаем цикл UART на MPU
+	{
+		req_init(3);
+
+		TxBuf[0]=16;						//считать номер текущей операции
+		TxBuf[1]=crc8(1,TxBuf);				//код операции
+
+		s.Req=false;						//однократно
+		s.Rsp=true;							//ожидаем прием
+		s.RspTimeOut=50;					//это время (в тиках Tmr0) ожидаем завершение приёма
+		s.TmrReq=false;
+		s.Error=255;						//сброс кода ошибки*
+//		s.ReqNum=3;							//*
+		flSPIEnd=false;
+
+		U2THR=TxBuf[0];						//заполняем стек передатчика
+		U2THR=TxBuf[1];
+	}
+
+
+
+	if(s.Rsp)
+	{
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		{
+			ui8 Crc;
+
+			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
+
+			if(Crc==RxBuf[RxByteWait])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
+					s.Proc=RxBuf[1];
+			}
+			s.Upd=true;						//?
+		}
+		else								//ещё не все байты, контролируем тайт-аут приема
+		{
+			if(s.RspTimeOut==0)
+			{
+				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
+
+				if(s.ReqNum>0)
+				{
+					s.ReqNum--;				//уменьшаем количество попыток
+					s.TmrReq=true;
+				}
+				else
+				{
+					s.Error=2;				//Ошибка "ТАЙМ-АУТ ПРИЁМА"
+					s.Upd=true;
+				}
+			}
+		}
+	}
+	return s;
+}
+
+MPU_Struct mpu_set_op(MPU_Struct s)
+{
+	if(s.Req)								// запускаем цикл UART на MPU
+	{
+		req_init(3);
+		TxBuf[0]=17;						//установить номер операции
+		TxBuf[1]=s.ProcNew;
+		TxBuf[2]=crc8(2,TxBuf);
+
+		s.Req=false;						//однократно
+		s.Rsp=true;							//ожидаем прием
+		s.RspTimeOut=50;					//это время (в тиках Tmr0) ожидаем завершение приёма
+		s.TmrReq=false;
+		s.Error=255;						//сброс кода ошибки*
+//		s.ReqNum=3;							//*
+		flSPIEnd=false;
+
+		U2THR=TxBuf[0];						//заполняем стек передатчика
+		U2THR=TxBuf[1];
+		U2THR=TxBuf[2];
+
+	}
+
+	if(s.Rsp)
+	{
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		{
+			ui8 Crc;
+
+			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
+
+			if(Crc==RxBuf[RxByteWait])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
+					s.Kvit=RxBuf[1];
+			}
+			s.Upd=true;						//?
+		}
+		else								//ещё не все байты, контролируем тайт-аут приема
+		{
+			if(s.RspTimeOut==0)
+			{
+				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
+
+				if(s.ReqNum>0)
+				{
+					s.ReqNum--;				//уменьшаем количество попыток
+					s.TmrReq=true;
+				}
+				else
+				{
+					s.Error=2;				//Ошибка "ТАЙМ-АУТ ПРИЁМА"
+					s.Upd=true;
+				}
+			}
+		}
+	}
+	return s;
+}
+
+
+MPU_Struct mpu_get_val(MPU_Struct s)
+{
+	if(s.Req)								// запускаем цикл UART на MPU
+	{
+		req_init(4);
+
+		TxBuf[0]=28;						//код команды - "установить номер операции"
+		TxBuf[1]=1;							//номер контура
+		TxBuf[2]=2;							//номер датчика
+		TxBuf[3]=crc8(3,TxBuf);
+
+		s.Req=false;						//однократно
+		s.Rsp=true;							//ожидаем прием
+		s.RspTimeOut=50;					//это время (в тиках Tmr0) ожидаем завершение приёма
+		s.TmrReq=false;
+		s.Error=255;						//сброс кода ошибки*
+//		s.ReqNum=3;							//*
+		flSPIEnd=false;
+
+		U2THR=TxBuf[0];						//заполняем стек передатчика
+		U2THR=TxBuf[1];
+		U2THR=TxBuf[2];
+		U2THR=TxBuf[3];
+	}
+
+	if(s.Rsp)
+	{
+
+
+
+
+
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		{
+			ui8 Crc;
+
+			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
+
+			if(Crc==RxBuf[RxByteWait])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
+					s.Par.b[1]=RxBuf[1];
+					s.Par.b[0]=RxBuf[2];
+			}
+			s.Upd=true;						//?
+		}
+		else								//ещё не все байты, контролируем тайт-аут приема
+		{
+			if(s.RspTimeOut==0)
+			{
+				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
+
+				if(s.ReqNum>0)
+				{
+					s.ReqNum--;				//уменьшаем количество попыток
+					s.TmrReq=true;
+				}
+				else
+				{
+					s.Error=2;				//Ошибка "ТАЙМ-АУТ ПРИЁМА"
+					s.Upd=true;
+				}
+			}
+		}
+	}
+	return s;
+}
+
 
 //задание уставок
 BPM_Struc bpm_set_point(BPM_Struc s)
 {
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
-		bpm_req_init(W_REQ);
-
-		bpm_req_init(W_REQ);
+		req_init(W_REQ);
 
 #ifdef MODBUS
 		ui16_Un Crc;
@@ -70,7 +256,7 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 		TxBuf[7]=0;						//данные ст. ==0
 		TxBuf[8]=s.Par.b[0];				//данные мл.
 
-		Crc.Val=mbfCRC(9,TxBuf);
+		Crc.Val=crc16(9,TxBuf);
 
 		TxBuf[9]=Crc.b[0];
 		TxBuf[10]=Crc.b[1];
@@ -113,7 +299,7 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
 
-			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+			Crc.Val=crc16(RxByteNum-2,RxBuf);		//отсекаем два байта кс
 
 //			RxBuf[9]=Crc.b[0];
 //			RxBuf[11]=Crc.b[1];
@@ -233,7 +419,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 #ifdef MODBUS
 		ui16_Un Crc;
 
-		bpm_req_init(R_STAT);			//ожидаемое количество байт в ответе
+		req_init(R_STAT);			//ожидаемое количество байт в ответе
 
 		TxBuf[0]=0x10;					//адрес по умолчанию
 		TxBuf[1]=0x04;					//код операции
@@ -242,7 +428,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 		TxBuf[4]=0;						//кол-во рег. ст. всегда ==0
 		TxBuf[5]=2;						//кол-во рег. мл.
 
-		Crc.Val=mbfCRC(6,TxBuf);
+		Crc.Val=crc16(6,TxBuf);
 
 		TxBuf[6]=Crc.b[0];
 		TxBuf[7]=Crc.b[1];
@@ -280,7 +466,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 #ifdef MODBUS
 			ui16_Un Crc;
 
-			Crc.Val=mbfCRC(RxByteWait-2,RxBuf);		//отсекаем два байта кс
+			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 
 			RxBuf[9]=Crc.b[0];
 			RxBuf[10]=Crc.b[1];
@@ -332,8 +518,9 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 
 				if(s.ReqNum>0)
 				{
-//					s.ReqNum--;				//уменьшаем количество попыток
-					s.Req=true;
+					s.ReqNum--;				//уменьшаем количество попыток
+					//s.Req=true;
+					s.TmrReq=true;
 				}
 				else
 				{
@@ -364,7 +551,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 {
 	if(s.Req)								// запускаем цикл UART на БПМ
 	{
-		bpm_req_init(R_REQ);				//получаем данные от одного регистра
+		req_init(R_REQ);				//получаем данные от одного регистра
 
 #ifdef MODBUS
 		ui16_Un Crc;
@@ -376,7 +563,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 		TxBuf[4]=0x00;						//кол-во рег. ст. всегда ==0
 		TxBuf[5]=0x01;						//кол-во рег. мл.
 
-		Crc.Val=mbfCRC(6,TxBuf);
+		Crc.Val=crc16(6,TxBuf);
 
 		TxBuf[6]=Crc.b[0];
 		TxBuf[7]=Crc.b[1];
@@ -420,7 +607,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
 
-			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+			Crc.Val=crc16(RxByteNum-2,RxBuf);		//отсекаем два байта кс
 
 //			RxBuf[9]=Crc.b[0];
 //			RxBuf[11]=Crc.b[1];
@@ -545,7 +732,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
-		bpm_req_init(W_REQ);
+		req_init(W_REQ);
 
 #ifdef MODBUS
 		ui16_Un Crc;
@@ -560,7 +747,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 		TxBuf[7]=0;						//данные ст. ==0
 		TxBuf[8]=par;					//данные мл.
 
-		Crc.Val=mbfCRC(9,TxBuf);
+		Crc.Val=crc16(9,TxBuf);
 
 		TxBuf[9]=Crc.b[0];
 		TxBuf[10]=Crc.b[1];
@@ -592,7 +779,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 
 		Debug=0;
 
-		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
 		{
 #ifdef MODBUS
 			ui16_Un Crc;
@@ -600,7 +787,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
 
-			Crc.Val=mbfCRC(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 
 //			RxBuf[9]=Crc.b[0];
 //			RxBuf[11]=Crc.b[1];
@@ -609,11 +796,14 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 
 			if(Crc.b[0]==RxBuf[RxByteWait-2])// && Crc.b[1]==RxBuf[RxByteWait-1])
 			{
-					s.Error=0;
-					s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
+				s.Error=0;
+				s.ReqNum=ReqNum;						//восстанавливаем s.ReqNum после удачного приема
 			}
-
-
+			else
+			{
+				s.Error=1;								//Ошибка "НЕПРАВИЛЬНАЯ КС"
+				s.Rsp=false;							//выходим из цикла приема
+			}
 #else
 			Sum=0;
 			for(int i=0;i<RxByteWait-1;i++)
@@ -658,19 +848,15 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 			if(s.RspTimeOut==0)
 			{
 				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
-
 				if(s.ReqNum>0)
 				{
 					s.ReqNum--;				//уменьшаем количество попыток
 					s.TmrReq=true;
-					//s.Req=true;
 				}
 				else
 				{
 					s.Error=2;				//Ошибка "ТАЙМ-АУТ ПРИЁМА"
-//					BPChk=false;			//за отведенное время и за n количества попыток не принято
 					s.Upd=true;
-//					for(;;){}				>>>>>>>> переход куда-нибудь
 				}
 			}
 		}

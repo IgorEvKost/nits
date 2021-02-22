@@ -296,7 +296,8 @@ void init()
 	//UART2
 	PCLKSEL1 |= 2<<PCLK_UART2;				//Peripheral clock CCLK/2
 	U2LCR |= (3<<U2LCR_WLS)|(0<<U2LCR_SBS)|(1<< U2LCR_DLAB);
-	U2DLL=230;
+//	U2DLL=230;								//9600
+	U2DLL=115;								//19200
 	U2DLM=0;
 	//U2FDR|=13<<U2FDR_MULVAL|4<<U2FDR_DIVADDVAL;
 	U2FDR|=1<<U2FDR_MULVAL|0<<U2FDR_DIVADDVAL;
@@ -322,3 +323,5 @@ void init()
     EMCControl = 0x00000001;
     exram_init();
 }
+
+

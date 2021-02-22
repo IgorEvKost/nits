@@ -45,6 +45,21 @@ typedef struct
 	ui16_Un St;		//регистр статуса
 } BPM_Struc;
 
+typedef struct
+{
+	bool Upd;		//
+	bool TmrReq;	//==true запрос на тайм-аут
+	bool Req;		//==true стадия запроса
+	bool Rsp;		//==true стадия приема ответа
+	ui8 ReqNum;		//максимальное количество запросов (при каждом запросе -1)
+	ui8 RspTimeOut;	//длительность ожидания завершения ответа
+	ui8 Error;		//код ошибки
+	ui8 Proc;		//текущий процесс
+	ui8 ProcNew;
+	ui8 Kvit;
+	ui16_Un Par;	//датчик
+} MPU_Struct;
+
 
 #define RXBUFSIZE	64
 #define RXPTRMAX	7
@@ -148,6 +163,7 @@ ui8 RxByteWait;		//==ожидаемое количество байт
 ui8 RxByteNum;		//==принятое количество байт
 ui8 RxByteNumOld;	//
 BPM_Struc BP1;
+MPU_Struct MPU;
 
 /*****Конец блока БПМ*****/
 
