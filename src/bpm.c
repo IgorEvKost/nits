@@ -416,10 +416,9 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 	{
 
 
-#ifdef MODBUS
 		ui16_Un Crc;
 
-		req_init(R_STAT);			//ожидаемое количество байт в ответе
+		req_init(R_STAT);				//ожидаемое количество байт в ответе
 
 		TxBuf[0]=0x10;					//адрес по умолчанию
 		TxBuf[1]=0x04;					//код операции
@@ -434,16 +433,6 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 		TxBuf[7]=Crc.b[1];
 
 		for(int i=0;i<8;i++) U2THR=TxBuf[i];
-#else
-		bpm_req_init(R_REQ);
-		U2THR=s.Adr;						//заполняет буфер передатчика
-		U2THR=0x52;
-		U2THR=0x02;
-		U2THR=0x00;
-		U2THR=0x06;
-		U2THR=0x06;
-		U2THR=0xA1;
-#endif
 
 		s.Req=false;					//однократно
 		s.Rsp=true;						//ожидаем прием
@@ -452,18 +441,20 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 //		s.ReqNum=3;						//количество попыток (ставим снаружи, перед вызовом функции)
 		flSPIEnd=false;
 		ReqNum=s.ReqNum;
+
 	}
 
 	if(s.Rsp)
 	{
-		Debug=0;
-
-		RxBuf[11]=RxByteNum;
-
+//		Debug=0;
+//		if(RxByteNum>2)
+//		{
+//			Debug=1;
+//			RxBuf[11]=RxByteNum;
+//		}
 
 		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
 		{
-#ifdef MODBUS
 			ui16_Un Crc;
 
 			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
@@ -471,9 +462,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 			RxBuf[9]=Crc.b[0];
 			RxBuf[10]=Crc.b[1];
 
-
-
-			Debug=1;
+//			Debug=1;
 
 			if(Crc.b[0]==RxBuf[RxByteWait-2])		// && Crc.b[1]==RxBuf[RxByteWait-1])
 			{
@@ -483,30 +472,13 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 					s.St.b[1]=RxBuf[RxByteWait-3];			// DD2
 
 			}
-#else
-
-			Sum=0;
-			for(int i=0;i<RxByteWait-1;i++)
-			{
-				Sum+=RxBuf[i];				//КС
-			}
-
-			if(Sum==0)
-			{
-				//принято правильное количество байт с правильной КС
-				s.Error=0;
-				s.ReqNum=ReqNum;			//восстанавливаем s.ReqNum после удачного приема
-				s.St.b[0]=RxBuf[6];			// код ошибки
-				s.St.b[1]=RxBuf[7];			// код состояния
-			}
 			else
 			{
 				//принято правильное количесво байт с неправильной КС
 				s.Error=1;
 			}
-#endif
-//			s.Rsp=false;
-//			s.Upd=true;
+			s.Rsp=false;
+			s.Upd=true;
 
 		}
 		else
@@ -514,7 +486,7 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 
 			if(s.RspTimeOut==0)
 			{
-				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
+//				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
 
 				if(s.ReqNum>0)
 				{
@@ -525,7 +497,6 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 				else
 				{
 					s.Error=2;
-//					BPChk=false;			//за отведенное время и за n количества попыток не принято
 					s.Upd=true;
 //					for(;;){}				>>>>>>>> переход куда-нибудь
 				}
@@ -726,7 +697,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
  */
 
 
-BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
+BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 data)
 {
 
 
@@ -745,7 +716,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 par)
 		TxBuf[5]=1;						//кол-во рег. мл.
 		TxBuf[6]=2;						//длина блока данных
 		TxBuf[7]=0;						//данные ст. ==0
-		TxBuf[8]=par;					//данные мл.
+		TxBuf[8]=data;					//данные мл.
 
 		Crc.Val=crc16(9,TxBuf);
 

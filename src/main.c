@@ -143,7 +143,7 @@ void perprint();
 void set9600();
 void set19200();
 void rs232();
-void rs484();
+void rs485();
 
 //void fazaprint();
 
@@ -300,7 +300,7 @@ int main(void)
 
 
 
-	Param_Struc I1={false,8,0,0,0,2000,""};			//ток отпыла на задвижку
+	Param_Struc I1={false,2,0,0,0,204,""};			//ток отпыла на задвижку
 
 	if(I1Var>I1.Max)
 	{
@@ -310,7 +310,7 @@ int main(void)
 	I1.Var=I1Var;
 	I1.VarOld=I1.Var;
 
-	Param_Struc I2={false,8,0,0,0,2000,""};			//ток процесса
+	Param_Struc I2={false,2,0,0,0,204,""};			//ток процесса
 
 	if(I2Var>I2.Max)
 	{
@@ -350,8 +350,11 @@ int main(void)
 	T2.Var=T2Var;
 	T2.VarOld=T2.Var;
 
-	BP1.Adr=0xFF;
+	BP1.Adr=0x10;
 	BP1.Par.Val=0;
+	BP1.Error=2;
+	BP1.ReqNum=3;
+
 
 //	S300Data.VarOld=Res.Max;
 
@@ -588,7 +591,7 @@ int main(void)
 
 				proc();
 				par();
-				spb();
+				sbp(BP1);
 //				fazaprint();
 
 				Rotator.On=false;
@@ -1665,30 +1668,41 @@ int main(void)
 //=====================================================================================================
 		switch (Proc)
         {
-
-
 			case 0:
 			{
-				if(Cnt2>50)
+				if(fl485)
 				{
-					BP1=bpm_get_stat(BP1);
+					if(Cnt2>50)
+					{
+						BP1=bpm_get_stat(BP1);
 
-					if(BP1.Error==0)
-					{
-						BP1.Req=true;					//разрешаем запрос
-						BP1.ReqNum=3;
-						BP1.Upd=true;
-						BP1.Rsp=false;
-						Cnt2=0;
+						if(BP1.Error==0)
+						{
+							BP1.Req=true;					//разрешаем запрос
+							BP1.ReqNum=3;
+							BP1.Upd=true;
+							Cnt2=0;
+						}
+						else
+						{
+							if(BP1.Error == 2 || BP1.Error == 1)
+							{
+								BP1.Req=true;					//ошибка блока
+								BP1.ReqNum=3;
+								BP1.Upd=true;
+								Cnt2=0;
+							}
+							else							//==255
+							{
+//								debug();
+							}
+						}
 					}
-					else
-					{
-						BP1.Req=true;					//ошибка блока
-						BP1.ReqNum=3;
-						BP1.Upd=true;
-						BP1.Rsp=false;
-						Cnt2=0;
-					}
+				}
+				else
+				{
+					rs485();
+					Cnt2=45;								//небольшая пауза
 				}
 			}
 			break;
@@ -1701,10 +1715,17 @@ int main(void)
 
 			case 10:								//отключение блока
 			{
-				BP1.ReqNum=3;
-				BP1.Req=true;
-				Cnt2=0;
-				Proc=11;
+				if(fl485)
+				{
+					BP1.ReqNum=3;
+					BP1.Req=true;
+					Cnt2=0;
+					Proc=11;
+				}
+				else
+				{
+					rs485();
+				}
 			}
 			break;
 
@@ -1716,7 +1737,7 @@ int main(void)
 					if(Cnt2>100)
 					{
 
-						BP1=bpm_command(BP1,3,0);	//3-выключить блок ("СТОП")
+						BP1=bpm_command(BP1,3,0xFF);	//3-выключить блок ("СТОП")
 
 						if(BP1.Error==0)
 						{
@@ -1858,7 +1879,7 @@ int main(void)
 					{
 						if((BP1.St.b[0]&DD1_RI)==0)	// && BP1.St.b[1]==~DD2_SWIT)	//0xB8 0x7D
 						{
-							BP1.Upd=true;
+//							BP1.Upd=true;
 							BP1.Req=true;			// разрешаем запрос
 							Cnt2=0;
 							Proc=22;				// загрузка заданий
@@ -1895,7 +1916,7 @@ int main(void)
             {
 				if(Cnt2>20)
 				{
-					BP1.Par.Val=206;			//I1.Var;
+					BP1.Par.Val=I1.Var;
 
 					BP1=bpm_set_point(BP1);
 
@@ -2013,7 +2034,7 @@ int main(void)
 
 					if(BP1.Error==0)
 					{
-						BP1.Upd=true;
+//						BP1.Upd=true;
 
 						if((BP1.St.b[0]&(DD1_RI|DD1_PWR))==0)
 						{
@@ -2139,7 +2160,6 @@ int main(void)
 
 					if(MPU.Error==0)
 					{
-
 
 //						MPU.Req=true;			//разрешаем запрос
 //						Cnt2=0;
@@ -2997,23 +3017,24 @@ int main(void)
 		{
 			BP1.Upd=false;
 
+			sbp(BP1);
 			if(BP1.Error==0)
 			{
 
-				spb();
+
 
 				switch(BP1.St.b[0]&(DD1_RI|DD1_PWR))
 				{
 					case 0:
 					{
-						DrawString(SBPM,&fnt30,BPM,YELLOW);						//в токе
+						DrawString(SBPM,&fnt30,BPM,YELLOW);						//в токе и пуске
 						BP1ok=10;
 					}
 					break;
 
-					case DD1_PWR:
+					case DD1_PWR :
 					{
-						DrawString(SBPM,&fnt30,BPM,GREEN);						//в токе и пуске
+						DrawString(SBPM,&fnt30,BPM,GREEN);						//в токе
 						BP1ok=10;
 					}
 					break;
@@ -3392,13 +3413,22 @@ void par()
 	flParOld=flPar;
 }
 
-void spb ()
+void sbp (BPM_Struc s)
 {
-	RegionFill(292,5,70,20,BackColour);
-	xsprintf(buffer,"%02x", BP1.St.b[1]);
-	DrawString(293,5,&fnt20,buffer,GREEN);
-	xsprintf(buffer,"%02x", BP1.St.b[0]);
-	DrawString(320,5,&fnt20,buffer,GREEN);
+	if(s.Error==2)
+	{
+		RegionFill(292,5,70,20,BackColour);
+		DrawString(293,5,&fnt20,"**",GREEN);
+		DrawString(320,5,&fnt20,"**",GREEN);
+	}
+	else
+	{
+		RegionFill(292,5,70,20,BackColour);
+		xsprintf(buffer,"%02x", BP1.St.b[1]);
+		DrawString(293,5,&fnt20,buffer,GREEN);
+		xsprintf(buffer,"%02x", BP1.St.b[0]);
+		DrawString(320,5,&fnt20,buffer,GREEN);
+	}
 }
 
 void proc()
@@ -3606,11 +3636,13 @@ void set19200()
 
 void rs232()
 {
+	fl485=false;
 	set9600();
 }
 
 void rs485()
 {
+	fl485=true;
 	set19200();
 }
 
