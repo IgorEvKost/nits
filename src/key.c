@@ -21,14 +21,81 @@ ui8 key()
 
 		res=0;
 		t=FIO0PIN3;
-		res|=(t&0b00001000)>>3;
-		res|=(t&0b00010000)>>2;
-		res|=(FIO0PIN1&0b00010000);				//But 0.12
-		res|=(FIO2PIN3&0b00000010)<<2;
-		res|=(FIO3PIN3&0b00000100)>>1;
+		res|=(t&0b00001000)>>3;					//0.27
+		res|=(t&0b00010000)>>2;					//0.28
+		res|=(FIO0PIN1&0b00010000);				//0.12
+		res|=(FIO2PIN3&0b00000010)<<2;			//2.25
+		res|=(FIO3PIN3&0b00000100)>>1;			//3.26
 		res|=0b11100000;
 		KeyCnt=0;
 	}
-
 	return ~res;
+}
+
+ui8 rd_port()
+{
+	ui8 t;
+
+	t=FIO3PIN2;
+	return t;
+}
+
+void set_port(ui8 data)					//номер порта
+{
+	switch(data)
+	{
+		case 0:
+		{
+			FIO3PIN|=1<<25;
+		}
+		break;
+
+		case 1:
+		{
+			FIO3PIN|=1<<27;
+		}
+		break;
+
+		case 2:
+		{
+			FIO3PIN|=1<<30;
+		}
+		break;
+
+		case 3:
+		{
+			FIO3PIN|=1<<31;
+		}
+		break;
+	}
+}
+
+void res_port(ui8 data)					//номер порта
+{
+	switch(data)
+	{
+		case 0:
+		{
+			FIO3PIN&=~(1<<25);
+		}
+		break;
+
+		case 1:
+		{
+			FIO3PIN&=~(1<<27);
+		}
+		break;
+
+		case 2:
+		{
+			FIO3PIN&=~(1<<30);
+		}
+		break;
+
+		case 3:
+		{
+			FIO3PIN&=~(1<<31);
+		}
+		break;
+	}
 }

@@ -5,7 +5,7 @@
 
 #define MODBUS
 
-#define TXPIN	(1<<19)				//порт 0.19
+#define TXPIN	(1<<19)				//порт 1.19
 #define RXPIN	(1<<26)				//порт 4.26
 
 
@@ -28,9 +28,28 @@ static void req_init(ui8 n)
 		RxBuf[i]=0;
 	}
 
-
-	FIO0PIN|=TXPIN;					//включение передатчика
+	FIO1PIN|=TXPIN;					//включение передатчика
 	FIO4PIN&=~RXPIN;
+
+	U2FCR|=1<<U2FCR_RXFIFOReset;
+
+	RxPtr=0;						//указатель буфера приёмника
+	RxByteWait=n;					//ожидаем число байт
+	RxByteNumOld=RxByteNum;			//
+	RxByteNum=0;					//принятое число байт
+	BP1ok=0;
+}
+
+
+static void mpu_init(ui8 n)
+{
+	for(int i=0;i<63;i++)			//сброс буфера приемника
+	{
+		RxBuf[i]=0;
+	}
+
+//	FIO1PIN|=TXPIN;					//включение передатчика
+//	FIO4PIN&=~RXPIN;
 
 	U2FCR|=1<<U2FCR_RXFIFOReset;
 
@@ -47,7 +66,7 @@ MPU_Struct mpu_get_op(MPU_Struct s)
 
 	if(s.Req)								// запускаем цикл UART на MPU
 	{
-		req_init(3);
+		mpu_init(3);
 
 		TxBuf[0]=16;						//считать номер текущей операции
 		TxBuf[1]=crc8(1,TxBuf);				//код операции
@@ -64,30 +83,33 @@ MPU_Struct mpu_get_op(MPU_Struct s)
 		U2THR=TxBuf[1];
 	}
 
-
-
 	if(s.Rsp)
 	{
-		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>RxByteWait)			//отслеживаем, когда придет всё
 		{
 			ui8 Crc;
 
 			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
 
-			if(Crc==RxBuf[RxByteWait])
+//			RxBuf[12]=Crc;
+
+			if(Crc==RxBuf[RxByteWait-1])
 			{
 					s.Error=0;
 					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
-					s.Proc=RxBuf[1];
+					s.Proc=RxBuf[1];		//сохранение текущей операции МПУ
 			}
+			else
+			{
+				s.Error=1;					//принято правильное количесво байт с неправильной КС
+			}
+			s.Rsp=false;
 			s.Upd=true;						//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
 		{
 			if(s.RspTimeOut==0)
 			{
-				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
-
 				if(s.ReqNum>0)
 				{
 					s.ReqNum--;				//уменьшаем количество попыток
@@ -108,9 +130,10 @@ MPU_Struct mpu_set_op(MPU_Struct s)
 {
 	if(s.Req)								// запускаем цикл UART на MPU
 	{
-		req_init(3);
+		mpu_init(3);
+
 		TxBuf[0]=17;						//установить номер операции
-		TxBuf[1]=s.ProcNew;
+		TxBuf[1]=s.Proc;
 		TxBuf[2]=crc8(2,TxBuf);
 
 		s.Req=false;						//однократно
@@ -129,26 +152,32 @@ MPU_Struct mpu_set_op(MPU_Struct s)
 
 	if(s.Rsp)
 	{
-		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>RxByteWait)			//отслеживаем, когда придет всё
 		{
 			ui8 Crc;
 
 			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
 
-			if(Crc==RxBuf[RxByteWait])
+			RxBuf[12]=Crc;
+			RxBuf[11]=RxBuf[2];
+
+			if(Crc==RxBuf[RxByteWait-1])
 			{
 					s.Error=0;
 					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
 					s.Kvit=RxBuf[1];
 			}
+			else
+			{
+				s.Error=1;					//принято правильное количесво байт с неправильной КС
+			}
+			s.Rsp=false;
 			s.Upd=true;						//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
 		{
 			if(s.RspTimeOut==0)
 			{
-				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
-
 				if(s.ReqNum>0)
 				{
 					s.ReqNum--;				//уменьшаем количество попыток
@@ -166,15 +195,15 @@ MPU_Struct mpu_set_op(MPU_Struct s)
 }
 
 
-MPU_Struct mpu_get_val(MPU_Struct s)
+MPU_Struct mpu_get_par(MPU_Struct s)
 {
 	if(s.Req)								// запускаем цикл UART на MPU
 	{
-		req_init(4);
+		mpu_init(4);
 
 		TxBuf[0]=28;						//код команды - "установить номер операции"
-		TxBuf[1]=1;							//номер контура
-		TxBuf[2]=2;							//номер датчика
+		TxBuf[1]=0;							//номер контура
+		TxBuf[2]=0;							//номер датчика
 		TxBuf[3]=crc8(3,TxBuf);
 
 		s.Req=false;						//однократно
@@ -193,32 +222,36 @@ MPU_Struct mpu_get_val(MPU_Struct s)
 
 	if(s.Rsp)
 	{
-
-
-
-
-
-		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>RxByteWait)			//отслеживаем, когда придет всё
 		{
 			ui8 Crc;
 
 			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
 
-			if(Crc==RxBuf[RxByteWait])
+//			RxBuf[8]=RxBuf[RxByteWait-1];
+//			RxBuf[9]=RxBuf[1];
+//			RxBuf[10]=RxBuf[2];
+//			RxBuf[11]=RxBuf[3];
+//			RxBuf[12]=Crc;
+
+			if(Crc==RxBuf[RxByteWait-1])
 			{
 					s.Error=0;
 					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
 					s.Par.b[1]=RxBuf[1];
 					s.Par.b[0]=RxBuf[2];
 			}
+			else
+			{
+				s.Error=1;					//принято правильное количесво байт с неправильной КС
+			}
+			s.Rsp=false;
 			s.Upd=true;						//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
 		{
 			if(s.RspTimeOut==0)
 			{
-				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
-
 				if(s.ReqNum>0)
 				{
 					s.ReqNum--;				//уменьшаем количество попыток
@@ -241,6 +274,9 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 {
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
+		FIO0PIN|=TXPIN;					//включение передатчика
+		FIO4PIN&=~RXPIN;
+
 		req_init(W_REQ);
 
 #ifdef MODBUS
@@ -414,8 +450,6 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 {
 	if(s.Req)							// запускаем цикл UART на БПМ
 	{
-
-
 		ui16_Un Crc;
 
 		req_init(R_STAT);				//ожидаемое количество байт в ответе
@@ -522,6 +556,9 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 {
 	if(s.Req)								// запускаем цикл UART на БПМ
 	{
+		FIO0PIN|=TXPIN;					//включение передатчика
+		FIO4PIN&=~RXPIN;
+
 		req_init(R_REQ);				//получаем данные от одного регистра
 
 #ifdef MODBUS
@@ -818,7 +855,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 data)
 		{
 			if(s.RspTimeOut==0)
 			{
-				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
+//				s.Rsp=false;				//нужного количества байт, выходим из цикла приема
 				if(s.ReqNum>0)
 				{
 					s.ReqNum--;				//уменьшаем количество попыток

@@ -54,8 +54,8 @@ typedef struct
 	ui8 ReqNum;		//максимальное количество запросов (при каждом запросе -1)
 	ui8 RspTimeOut;	//длительность ожидания завершения ответа
 	ui8 Error;		//код ошибки
-	ui8 Proc;		//текущий процесс
-	ui8 ProcNew;
+	ui8 ProcOld;	//предъидущий процесс
+	ui8 Proc;	//текущий процесс
 	ui8 Kvit;
 	ui16_Un Par;	//датчик
 } MPU_Struct;
@@ -65,7 +65,7 @@ typedef struct
 #define RXPTRMAX	7
 #define SEC1		100
 #define BEEPS		3	//короткий BEEP
-#define KEYCNT		3
+#define KEYCNT		15
 #define MODECNT		8000 //@
 
 ui16 Cnt1;			//счетчик периода датчика вращения
@@ -235,9 +235,28 @@ ui8 ProcCount;
 #define BEEP_0n;	    FIO0PIN|=(1<<23)
 
 
-//Ui16Var Res={500,500,0,1000,0};
-//Ui16Var RunMode={0,0,0,3,0};
-
 ui16 Debug;
 
 bool fl485;
+#define RS485		0x00800000		//переключение RS485<>RS232
+
+
+//входные и выходные порты
+ui8 InPort;							//здесь храним значение входного порта
+ui8 InPortOld;						//предыдущее значение
+
+bool flWTR1;
+bool flWTR2;
+bool flGLSDWN;
+
+#define PWTR1		0b00000001		//реле протока 1
+#define PWTR2		0b00010000		//реле протока 2
+#define PGLSDWN		0b00001000		//датчик нижнего положения стекла
+
+#define PRL		0
+#define PRR		1
+#define PVL		2
+
+#define MPUPROC1	10
+#define MPUPROC2	11
+

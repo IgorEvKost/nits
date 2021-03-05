@@ -20,9 +20,9 @@
 #define	PY0 -60-60						//Y
 #define MSGCOLOR GREEN				//цвет сообщений
 
-#define led2	0x00800000
+//#define led2	0x00800000
 #define CLED	0x80000000			//светодиод энкодера
-#define TXPIN	(1<<19)				//порт 0.19
+#define TXPIN	(1<<19)				//порт 1.19
 #define RXPIN	(1<<26)				//порт 4.26
 
 //координаты и размеры кнопок
@@ -72,11 +72,11 @@
 #define FI2		365+PX0+XR,290+PY0,85,40		// ток процесса
 #define FTP     365+PX0+XR,370+PY0,85,40		// время ожидания давления
 #define	FP1     150+PX0+XL,370+PY0,95,40		// давление 1
-#define	FP2     155+PX0+XL,375+PY0,95,40		// давление 2
+#define	FP2     150+PX0+XL,455+PY0,95,40		// давление 2
 #define	FP1M	240+PX0+XL,353+PY0,65,40		// допуск на давление 1 с низу																		//nits
 #define	FP1P	240+PX0+XL,398+PY0,65,40		// допуск на давление 1 с верху
-#define	FP2M	245+PX0+XL,353+PY0,65,40		// допуск на давление 2 с низу																		//nits
-#define	FP2P	245+PX0+XL,398+PY0,65,40		// допуск на давление 2 с верху
+#define	FP2M	240+PX0+XL,433+PY0,65,40		// допуск на давление 2 с низу																		//nits
+#define	FP2P	240+PX0+XL,478+PY0,65,40		// допуск на давление 2 с верху
 
 
 #define S300	50,300				//строка "R>"
@@ -85,7 +85,7 @@
 #define	STIME	50,200				//строка "T>"
 #define DTIME	220,200				//данные таймера
 
-#define STS		10,5				//строка "md:     proc:     sbp:    par:    n:    t: "
+#define STS		10,5				//строка "md:     proc:     sbp:    par:   in:    t: "
 #define STSMD	20,2
 #define STSPROC 50,2
 #define STSBP	200,2
@@ -99,17 +99,19 @@
 #define SMSG7	110,410				//строка ПО СОПРОТИВЛЕНИЮ
 #define SMSG8	175,410				//строка ПО ВРАЩЕНИЮ
 
-//статус устройств
-#define SBPM	50,45				//строка БПМ
-#define	SIZM	180,45				//строка ИЗМ
-#define SROT	315,45				//строка ВРАЩ
+//строки статуса устройств
+#define SBPM	40,45				//строка БПМ
+#define	SWTR1	150,45				//строка РПЖ1
+#define	SWTR2	270,45				//строка РПЖ2
+#define SROT	400,45				//строка ВРАЩ
 
 #define SV		4,465				//версия ПО
 
 
 //
 const ui8 BPM[4]={0xC1,0xCF,0xCC,0};				//БПМ
-const ui8 IZM[5]={0xD9,0x33,0x30,0x30,0};			//Щ300
+const ui8 WTR1[5]={0xD0,0xCF,0xC6,0x31,0};			//РПЖ1
+const ui8 WTR2[5]={0xD0,0xCF,0xC6,0x32,0};			//РПЖ2
 const ui8 ROT[5]={0xC2,0xD0,0xC0,0xD9,0};			//ВРАЩ
 
 //#20
@@ -144,6 +146,9 @@ void set9600();
 void set19200();
 void rs232();
 void rs485();
+void set_port(ui8);
+void res_port(ui8);
+ui8 rd_port();
 
 //void fazaprint();
 
@@ -156,7 +161,7 @@ BPM_Struc bpm_start(BPM_Struc);
 BPM_Struc bpm_stop(BPM_Struc);
 MPU_Struct mpu_get_op(MPU_Struct);
 MPU_Struct mpu_set_op(MPU_Struct);
-MPU_Struct mpu_get_val(MPU_Struct);
+MPU_Struct mpu_get_par(MPU_Struct);
 
 Param_Struc encoder(Param_Struc);
 
@@ -246,7 +251,7 @@ int main(void)
 	Param_Struc RunMode={false,1,1,1,1,3,""};
 	Param_Struc ParNum={false,1,1,1,1,NUMPAR,""};				//селектор параметра для коррекции
 
-	Param_Struc P1P={false,10,20,20,0,500,""};
+	Param_Struc P1P={false,10,0,0,0,500,""};
 	if(P1PVar>P1P.Max)
 	{
 		P1PVar=0;
@@ -254,7 +259,7 @@ int main(void)
 	P1P.Var=P1PVar;
 	P1P.VarOld=P1P.Var;
 
-	Param_Struc P1M={false,10,20,20,0,500,""};
+	Param_Struc P1M={false,10,0,0,0,500,""};
 	if(P1MVar>P1M.Max)
 	{
 		P1MVar=0;
@@ -262,7 +267,7 @@ int main(void)
 	P1M.Var=P1MVar;
 	P1M.VarOld=P1M.Var;
 
-	Param_Struc P1={false,10,500,500,0,12000,""};
+	Param_Struc P1={false,10,0,0,0,2047,""};
 
 	if(P1Var>P1.Max)
 	{
@@ -271,7 +276,7 @@ int main(void)
 	P1.Var=P1Var;
 	P1.VarOld=P1.Var;
 
-	Param_Struc P2P={false,10,20,20,0,500,""};
+	Param_Struc P2P={false,10,0,0,0,500,""};
 	if(P2PVar>P2P.Max)
 	{
 		P2PVar=0;
@@ -279,7 +284,7 @@ int main(void)
 	P2P.Var=P2PVar;
 	P2P.VarOld=P2P.Var;
 
-	Param_Struc P2M={false,10,20,20,0,500,""};
+	Param_Struc P2M={false,10,0,0,0,500,""};
 	if(P2MVar>P2M.Max)
 	{
 		P2MVar=0;
@@ -287,7 +292,7 @@ int main(void)
 	P2M.Var=P2MVar;
 	P2M.VarOld=P2M.Var;
 
-	Param_Struc P2={false,10,500,500,0,12000,""};
+	Param_Struc P2={false,10,0,0,0,2047,""};
 
 	if(P2Var>P2.Max)
 	{
@@ -363,16 +368,10 @@ int main(void)
 
 	LCD_Initialize();			//при переносе в init() зависает!!!
 
-
-
-
 	LoadFont(&fnt16, font16);
 	LoadFont(&fnt20, font20);
 	LoadFont(&fnt30, font30);
 	LoadFont(&fnt60, font60);
-
-
-//	FIO2PIN=1;
 
 	BackColour=DDGRAY;
 
@@ -448,7 +447,10 @@ int main(void)
 
 	DrawString(SV,&fnt16,MSGVER,GREEN);				//версия
 
-	DrawString(STS,&fnt20,"md:             proc:           sbp:             par:       n:        t:",GREEN);
+	DrawString(STS,&fnt20,"md:             proc:           sbp:             par:      in:        t:",GREEN);
+
+	InPort=rd_port();
+	InPortOld=~InPort;
 
 	while(1)						//крутимся здесь
 	{
@@ -567,9 +569,10 @@ int main(void)
 				DrawString(STIME,&fnt60,"T>",BackColour);
 				DrawString(DTIME,&fnt60,Timer1.buf,BackColour);
 
-				DrawString(SBPM,&fnt30,BPM,BackColour);
-				DrawString(SIZM,&fnt30,IZM,BackColour);
-				DrawString(SROT,&fnt30,ROT,BackColour);
+//				DrawString(SBPM,&fnt30,BPM,BackColour);
+//				DrawString(SWTR1,&fnt30,WTR1,BackColour);
+//				DrawString(SWTR2,&fnt30,WTR2,BackColour);
+//				DrawString(SROT,&fnt30,ROT,BackColour);
 
 //@1				MsgIdNew=255;									//удаляем УСТАНОВКА ПАРАМЕТРОВ
 
@@ -592,6 +595,7 @@ int main(void)
 				proc();
 				par();
 				sbp(BP1);
+
 //				fazaprint();
 
 				Rotator.On=false;
@@ -882,86 +886,89 @@ int main(void)
 
 		if(flParNum==0)
 		{
-		switch(ParNum.Var)						// отрисовка рамок выбора параметра
-		{
-			case 1:
-			{
-				rect(FP2P,BackColour);			// давление 2 допуск с верху
-				rect(FT1,GREEN);				// время отпыла
-			}
-			break;
+//			RxBuf[12]=(ui8)(ParNum.Var);
+//			debug();
 
-			case 2:
+			switch(ParNum.Var)						// отрисовка рамок выбора параметра
 			{
-				rect(FT1,BackColour);			// время отпыла
-				rect(FT2,GREEN);				// время процесса
-			}
-			break;
+				case 1:
+				{
+					rect(FP2P,BackColour);			// давление 2 допуск с верху
+					rect(FT1,GREEN);				// время отпыла
+				}
+				break;
 
-			case 3:
-			{
-				rect(FT2,BackColour);			// время процесса
-				rect(FP1,GREEN);				// давление 1
-			}
-			break;
+				case 2:
+				{
+					rect(FT1,BackColour);			// время отпыла
+					rect(FT2,GREEN);				// время процесса
+				}
+				break;
 
-			case 4:
-			{
-				rect(FP1,BackColour);			// сопротивление
-				rect(FP1M,GREEN);				// давление 1 допуск с низу
-			}
-			break;
+				case 3:
+				{
+					rect(FT2,BackColour);			// время процесса
+					rect(FP1,GREEN);				// давление 1
+				}
+				break;
 
-			case 5:
-			{
-				rect(FP1M,BackColour);			// допуск снизу
-				rect(FP1P,GREEN);				// давление 1 допуск с верху
-			}
-			break;
+				case 4:
+				{
+					rect(FP1,BackColour);			// давление 1
+					rect(FP1M,GREEN);				// давление 1 допуск с низу
+				}
+				break;
 
-			case 6:
-			{
-				rect(FP1P,BackColour);			// допуск с верху
-				rect(FI1,GREEN);				// ток отпыла
-			}
-			break;
+				case 5:
+				{
+					rect(FP1M,BackColour);			// допуск снизу
+					rect(FP1P,GREEN);				// давление 1 допуск с верху
+				}
+				break;
 
-			case 7:
-			{
-				rect(FI1,BackColour);			// ток отпыла
-				rect(FI2,GREEN);				// ток процесса
-			}
-			break;
+				case 6:
+				{
+					rect(FP1P,BackColour);			// допуск с верху
+					rect(FI1,GREEN);				// ток отпыла
+				}
+				break;
 
-			case 8:
-			{
-				rect(FI2,BackColour);			// ток процесса
-				rect(FTP,GREEN);				// время ожидания давления
-			}
-			break;
+				case 7:
+				{
+					rect(FI1,BackColour);			// ток отпыла
+					rect(FI2,GREEN);				// ток процесса
+				}
+				break;
 
-			case 9:
-			{
-				rect(FTP,BackColour);			// время ожидания давления
-				rect(FP2,GREEN);				// давление 2
-			}
-			break;
+				case 8:
+				{
+					rect(FI2,BackColour);			// ток процесса
+					rect(FTP,GREEN);				// время ожидания давления
+				}
+				break;
 
-			case 10:
-			{
-				rect(FP2,BackColour);			// давление 2
-				rect(FP2M,GREEN);				// давление 2 допуск с низу
-			}
-			break;
+				case 9:
+				{
+					rect(FTP,BackColour);			// время ожидания давления
+					rect(FP2,GREEN);				// давление 2
+				}
+				break;
 
-			case 11:
-			{
-				rect(FP2M,BackColour);			// давление 2 допуск с низу
-				rect(FP2P,GREEN);				// давление 2 допуск с верху
+				case 10:
+				{
+					rect(FP2,BackColour);			// давление 2
+					rect(FP2M,GREEN);				// давление 2 допуск с низу
+				}
+				break;
+
+				case 11:
+				{
+					rect(FP2M,BackColour);			// давление 2 допуск с низу
+					rect(FP2P,GREEN);				// давление 2 допуск с верху
+				}
+				break;
 			}
-			break;
-		}
-		flParNum=1;
+			flParNum=1;
 		}
 	}
 
@@ -1015,8 +1022,9 @@ int main(void)
 
 
 				DrawString(SBPM,&fnt30,BPM,BLACK);
-				DrawString(SIZM,&fnt30,IZM,BLACK);
-				DrawString(SROT,&fnt30,ROT,BLACK);
+//				DrawString(SWTR1,&fnt30,WTR1,BLACK);
+//				DrawString(SWTR2,&fnt30,WTR2,BLACK);
+//				DrawString(SROT,&fnt30,ROT,BLACK);
 
 //#15
 				MsgIdNew=1;									//ОЧИСТКА
@@ -1692,7 +1700,7 @@ int main(void)
 								BP1.Upd=true;
 								Cnt2=0;
 							}
-							else							//==255
+							else								//==255
 							{
 //								debug();
 							}
@@ -1702,14 +1710,10 @@ int main(void)
 				else
 				{
 					rs485();
-					Cnt2=45;								//небольшая пауза
+					Cnt2=45;									//небольшая пауза
 				}
 			}
 			break;
-
-
-
-
 
 
 
@@ -1717,6 +1721,11 @@ int main(void)
 			{
 				if(fl485)
 				{
+					res_port(0);
+					res_port(1);
+					res_port(2);
+					res_port(4);
+
 					BP1.ReqNum=3;
 					BP1.Req=true;
 					Cnt2=0;
@@ -1807,27 +1816,157 @@ int main(void)
 					//включаем привод
 
 			//если внизу, то привод выключаем
-				Proc=2;
+				if(fl485)
+				{
+					rs232();
+				}
+				else
+				{
+					MPU.Req=true;
+					MPU.ReqNum=3;
+					MPU.Upd=true;
+					Cnt2=0;
+					Proc=2;
+				}
             }
             break;
 
-
-
-			case 2:
+			case 2:									// получение и сохранение текущей операции МПУ
 			{
-			// получение и сохранение текущей операции МПУ
+				if(Cnt2>50)
+				{
+					MPU=mpu_get_op(MPU);
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							MPU.ProcOld=MPU.Proc;
+							MPU.Proc=MPUPROC1;		//новый процесс
 
-			// переключение натекателей
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+							Proc=3;
+						}
+						break;
 
-			//переключение МПУ в операцию 10
-				Proc=3;
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
 			}
 			break;
 
-			case 3:									//ожидаем готовности МПУ какое-то время, выход по готовности (Proc=21) или по времени
+			case 3:									//переключение МПУ в операцию 10
 			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_set_op(MPU);
 
-				Proc=20;
+					switch (MPU.Error)
+					{
+
+						case 0:						//получен успешно
+						{
+//							debug();
+							if(MPU.Kvit==1)			//операция выбрана
+							{
+								set_port(PVL);					// переключение натекателей
+								MPU.Req=true;
+								MPU.ReqNum=3;
+								MPU.Upd=true;
+								Cnt2=0;
+								Proc=4;
+							}
+							else					//операция не выбрана
+							{
+								Proc=50;
+							}
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+//							debug();
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
+
+//				Proc=20;
+			}
+			break;
+
+			case 4:								//ожидаем готовности МПУ какое-то время, выход по готовности (Proc=21) или по времени
+			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_get_par(MPU);
+//					debug();
+					switch (MPU.Error)
+					{
+
+						case 0:						//получен успешно
+						{
+							if((MPU.Par.Val>=P1.Var-P1M.Var) && (MPU.Par.Val<=P1.Var+P1P.Var))
+							{
+								rs485();
+								Proc=20;			//на включение блока питания
+							}
+							else
+							{
+								Proc=5;
+							}
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+							Proc=5;					//проверим таймер
+						}
+						break;
+					}
+				}
+			}
+			break;
+
+			case 5:									//проверка таймера готовности МПУ
+			{
+				if(Timer1.On)
+				{
+					if(Timer1.Val==0)
+					{
+						Proc=50;					//готовности МПУ нет, выходим по таймеру
+					}
+					else
+					{
+						MPU.Req=true;
+						MPU.ReqNum=3;
+						MPU.Upd=true;
+						Cnt2=0;
+						Proc=4;
+					}
+				}
+				else
+				{
+					Timer1.Val=TP.Var;
+					SecCnt=SEC1;		//это счетчик прерываний по TMR0, при SecCnt=0 ставиться флаг, что секунда прошла
+					Timer1.On=true;		//таймер выключен, включаем
+				}
 			}
 			break;
 
@@ -1854,18 +1993,22 @@ int main(void)
 					}
 					else
 					{
-						if(BP1.Error==2)
+						if(BP1.Error==2 || BP1.Error==1)
 						{
 							Proc=20;
 						}
+						else
+						{
+
+						}
 					}
 
-					if(BP1.TmrReq)
-					{
-						BP1.TmrReq=false;
-						BP1.Req=true;			//разрешаем повторные запросы
-						Cnt2=0;				//повторные запросы без секундных пауз
-					}
+//					if(BP1.TmrReq)
+//					{
+//						BP1.TmrReq=false;
+//						BP1.Req=true;			//разрешаем повторные запросы
+//						Cnt2=0;				//повторные запросы без секундных пауз
+//					}
 				}
             }
             break;
@@ -2046,9 +2189,10 @@ int main(void)
 							}
 							else
 							{
-								Timer1.On=true;		//таймер выключен, включаем
 								SecCnt=SEC1;		//это счетчик прерываний по TMR0, при SecCnt=0 ставиться флаг, что секунда прошла
-							}						//
+								Timer1.Val=T1.Var;
+								Timer1.On=true;		//таймер выключен, включаем
+							}
 						}
 						else
 						{
@@ -2079,9 +2223,14 @@ int main(void)
 				}
 				else
 				{
-					Proc=233;						//загрузка рабочих уставок
+					set_port(PRL);					//включаем вращение
+					Timer1.Val=T1.Var;				//длительность слоя 1
+					SecCnt=SEC1;					//интервал 1 секунда
+					Timer1.On=true;					//включение отсчета
+
 					BP1.Req=true;
 					Cnt2=0;
+					Proc=233;
 				}
 
 			}
@@ -2089,7 +2238,7 @@ int main(void)
 
 
 			/******************************************
-			*			  РАБОЧИЙ СЛОЙ
+			*			  РАБОЧИЙ СЛОЙ 1
 			*******************************************/
 
 			case 233:							//
@@ -2132,6 +2281,7 @@ int main(void)
 						MPU.ReqNum=3;
 						Cnt2=0;
 						rs232();
+						set_port(PRL);			//включаем вращение
 						Proc=235;
 					}
 					else
@@ -2149,14 +2299,12 @@ int main(void)
 			}
 			break;
 
-			//крутимся по 235, проходим дальше по кнопке "CONT" или останавливаемся по "STOP"
-			case 235:
+
+			case 235:							//вращение включено, проходим дальше по кнопке "CONT" или останавливаемся по "STOP"
 			{
 				if(Cnt2>50)
 				{
 					MPU=mpu_get_op(MPU);
-
-
 
 					if(MPU.Error==0)
 					{
@@ -2942,6 +3090,42 @@ int main(void)
 //=====================================================================================================
 
 
+////%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+////								          Обмен с устройствами
+////%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+//		switch(Comm):
+//		{
+//			case 0:
+//			{
+//				BP1=bpm_get_stat(BP1);
+//			}
+//			break;
+
+//			case 1:
+//			{
+//				BP1=bpm_set_point(BP1);
+//			}
+//			break;
+
+//			case 2:
+//			{
+//				BP1=bpm_command(BP1);
+//			}
+//			break;
+
+
+
+
+
+
+
+
+
+
+
+
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 //								Таймеры, счетчики, индикаторы, сообщения
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2975,12 +3159,12 @@ int main(void)
 		{
 			if(S300Mode.Var==S300MODE)
 			{
-				DrawString(SIZM,&fnt30,IZM,GREEN);
+//				DrawString(SIZM,&fnt30,IZM,GREEN);
 				S300ok=10;
 			}
 			else
 			{
-				DrawString(SIZM,&fnt30,IZM,BLACK);
+//				DrawString(SIZM,&fnt30,IZM,BLACK);
 				if(S300ok>0)
 				{
 					S300ok--;
@@ -3010,7 +3194,27 @@ int main(void)
 			S300Data.Upd=0;
 		}
 
+		//индикатор РПЖ1
+		if(flWTR1)
+		{
+			flWTR1=false;
 
+			if((InPort&PWTR1)==0)
+				DrawString(SWTR1,&fnt30,WTR1,BLACK);
+			else
+				DrawString(SWTR1,&fnt30,WTR1,GREEN);
+		}
+
+		//индикатор РПЖ2
+		if(flWTR2)
+		{
+			flWTR2=false;
+
+			if((InPort&PWTR2)==0)
+				DrawString(SWTR2,&fnt30,WTR2,BLACK);
+			else
+				DrawString(SWTR2,&fnt30,WTR2,GREEN);
+		}
 
 		//индикатор блока питания
 		if(BP1.Upd)
@@ -3083,22 +3287,6 @@ int main(void)
 		}
 
 
-		//на последнем обороте производим коррекцию момента выключения тока
-		//блок должен находиться ПЕРЕД счетчиком оборотов!
-		if(Rotator.On && Rotator.Val==1)
-		{
-//			if(RotPerCnt>RotPer-150+Tf.Var)
-			{
-				Rotator.Val--;
-				if(flRotUpdEn)
-				{
-					flRotValUpd=true;
-				}
-			}
-			flRot1=false;
-			flRot0=false;
-		}
-
 		//счетчик оборотов
 		if(Rotator.On && flRot1 && flRot0)
 		{
@@ -3123,49 +3311,15 @@ int main(void)
 		}
 
 
-		//индикатор вращения
-		if(((1<<6)&(ui8)FIO3PIN3)==0)	//P3.30 порт датчика вращения
+		//индикатор датчика нижнего положения
+		if(flGLSDWN)
 		{
-			Cnt1=0;						//магнит не под ДХ, считаем в Timer0IntrHandler()
-			flRot0=true;
-		}
-		else
-		{
-			Cnt11=0;					//магнит под ДХ, считаем в Timer0IntrHandler()
-			if(flRot0)	flRot1=true;
-		}
+			flGLSDWN=false;
 
-
-
-		flRotOkOld=flRotOk;
-		if(Cnt1<ROTPER && Cnt11<ROTPER)	//если Cnt1 и Cnt11 < ROTPER, то считаем что вращение в норме
-		{
-			flRotOk=true;
-		}
-		else
-		{
-			flRotOk=false;
-		}
-
-		if(flRotOkOld!=flRotOk)
-		{
-			flRotUpd=true;						//обновляем индикатор на экране
-		}
-
-
-		if(flRotUpd&&(RunMode.Var==3|RunMode.Var==35|RunMode.Var==358|RunMode.Var==352|RunMode.Var==30|RunMode.Var==300|RunMode.Var==3002))
-		{
-			if(flRotOk)
-			{
-				DrawString(SROT,&fnt30,ROT,GREEN);
-			}
-			else
-			{
+			if((InPort&PGLSDWN)==0)
 				DrawString(SROT,&fnt30,ROT,BLACK);
-				flRot1=flRot0=false;
-				Proc=31;
-			}
-			flRotUpd=0;
+			else
+				DrawString(SROT,&fnt30,ROT,GREEN);
 		}
 
 //#9
@@ -3335,8 +3489,31 @@ int main(void)
 		}
 
 
+		InPort=rd_port();
+//		debug();
+		if((InPort&PWTR1)!=(InPortOld&PWTR1))
+		{
+			flWTR1=true;
+			InPortOld = InPortOld&(~PWTR1);
+			InPortOld |= InPort&PWTR1;
+		}
 
-	} //while(1)
+		//индикатор РПЖ2
+		if((InPort&PWTR2)!=(InPortOld&PWTR2))
+		{
+			flWTR2=true;
+			InPortOld &= InPortOld&(~PWTR2);
+			InPortOld |= InPort&PWTR2;
+		}
+
+		//датчик нижнего положения
+		if((InPort&PGLSDWN)!=(InPortOld&PGLSDWN))
+		{
+			flGLSDWN=true;
+			InPortOld &= InPortOld&(~PGLSDWN);
+			InPortOld |= InPort&PGLSDWN;
+		}
+	}//while(1)
 }
 
 
@@ -3558,9 +3735,8 @@ void UART2IntrHandler()
 			c++;
 		}
 
-        FIO0PIN&=~TXPIN;
+        FIO1PIN&=~TXPIN;
         FIO4PIN|=RXPIN;
-        FIO4PIN&=~led2;
         U2FCR|=1<<U2FCR_RXFIFOReset;
         RxPtr = 0;
 
@@ -3637,12 +3813,14 @@ void set19200()
 void rs232()
 {
 	fl485=false;
+	FIO4PIN&=~RS485;			//P3.23
 	set9600();
 }
 
 void rs485()
 {
 	fl485=true;
+	FIO4PIN|=RS485;				//P3.23
 	set19200();
 }
 
@@ -3688,10 +3866,14 @@ void debug()
 	xsprintf(buffer,"%02x", RxBuf[12]);
 	DrawString(370,370,&fnt20,buffer,WHITE);
 
+//	xsprintf(buffer,"%02x", InPortOld);
+//	DrawString(370,370,&fnt20,buffer,WHITE);
+
 	xsprintf(buffer,"%02x", MPU.Error);
 	DrawString(400,370,&fnt20,buffer,RED);
 
-
+//	xsprintf(buffer,"%02x", InPort);
+//	DrawString(400,370,&fnt20,buffer,RED);
 
 
 /*

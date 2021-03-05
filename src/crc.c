@@ -26,32 +26,19 @@ unsigned int crc16(int cnt, unsigned char volatile buf[])
 	return(mbCRC);
 }
 
-
-ui8 crc8(int cnt, unsigned char volatile buf[])
+ui8 crc8(int size, const ui8 buf[])
 {
-    ui8 crc = 0xff;
-    int i, j;
-    for (i = 0; i < cnt; i++)
+    ui8 crc = 0;
+    for ( int i = 0; i < size; ++i )
     {
-        crc ^= buf[i];
-        for (j = 0; j < 8; j++)
+        ui8 inbyte = buf[i];
+        for ( ui8 j = 0; j < 8; ++j )
         {
-            if ((crc & 0x80) != 0)
-                crc = (ui8)((crc << 1) ^ 0x31);
-            else
-                crc <<= 1;
+            ui8 mix = (crc ^ inbyte) & 0x01;
+            crc >>= 1;
+            if ( mix ) crc ^= 0x8C;
+            inbyte >>= 1;
         }
     }
     return crc;
 }
-
-//int main()
-//{
-//uint8_t data[8] = {0xBE,0xEF,0,0,0,0,0,0};
-//uint8_t crc;
-//    crc = gencrc(data, 2);   /* returns 0x92 */
-//    printf("%1x\n", crc);
-//    crc = gencrc(data+2, 1); /* returns 0xac */
-//    printf("%1x\n", crc);
-//    return 0;
-//}
