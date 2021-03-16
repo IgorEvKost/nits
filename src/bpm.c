@@ -195,6 +195,79 @@ MPU_Struct mpu_set_op(MPU_Struct s)
 }
 
 
+MPU_Struct mpu_set_state(MPU_Struct s)
+{
+	if(s.Req)								// запускаем цикл UART на MPU
+	{
+		mpu_init(2);
+
+		TxBuf[0]=23;						//установить номер операции
+		TxBuf[1]=0;							//номер контура
+		TxBuf[2]=s.State;					//состояние контура
+		TxBuf[3]=crc8(3,TxBuf);
+
+		s.Req=false;						//однократно
+		s.Rsp=true;							//ожидаем прием
+		s.RspTimeOut=50;					//это время (в тиках Tmr0) ожидаем завершение приёма
+		s.TmrReq=false;
+		s.Error=255;						//сброс кода ошибки*
+//		s.ReqNum=3;							//*
+		flSPIEnd=false;
+
+		U2THR=TxBuf[0];						//заполняем стек передатчика
+		U2THR=TxBuf[1];
+		U2THR=TxBuf[2];
+		U2THR=TxBuf[3];
+
+	}
+
+	if(s.Rsp)
+	{
+		if(RxByteNum>RxByteWait)			//отслеживаем, когда придет всё
+		{
+			ui8 Crc;
+
+			Crc=crc8(RxByteWait-1,RxBuf);	//отсекаем байт кс
+
+//			RxBuf[12]=Crc;
+//			RxBuf[11]=RxBuf[2];
+
+			if(Crc==RxBuf[RxByteWait-1])
+			{
+					s.Error=0;
+					s.ReqNum=ReqNum;		//восстанавливаем s.ReqNum после удачного приема
+//					s.Kvit=RxBuf[1];
+			}
+			else
+			{
+				s.Error=1;					//принято правильное количесво байт с неправильной КС
+			}
+			s.Rsp=false;
+			s.Upd=true;						//?
+		}
+		else								//ещё не все байты, контролируем тайт-аут приема
+		{
+			if(s.RspTimeOut==0)
+			{
+				if(s.ReqNum>0)
+				{
+					s.ReqNum--;				//уменьшаем количество попыток
+					s.TmrReq=true;
+				}
+				else
+				{
+					s.Error=2;				//Ошибка "ТАЙМ-АУТ ПРИЁМА"
+					s.Upd=true;
+				}
+			}
+		}
+	}
+	return s;
+}
+
+
+
+
 MPU_Struct mpu_get_par(MPU_Struct s)
 {
 	if(s.Req)								// запускаем цикл UART на MPU
@@ -849,7 +922,7 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 data)
 
 			}
 #endif
-			s.Upd=true;					//?
+			s.Upd=true;						//?
 		}
 		else								//ещё не все байты, контролируем тайт-аут приема
 		{

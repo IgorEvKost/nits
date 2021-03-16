@@ -55,9 +55,11 @@ typedef struct
 	ui8 RspTimeOut;	//длительность ожидания завершения ответа
 	ui8 Error;		//код ошибки
 	ui8 ProcOld;	//предъидущий процесс
-	ui8 Proc;	//текущий процесс
+	ui8 Proc;		//текущий процесс
+	ui8 State;		//состояние контура управления
 	ui8 Kvit;
-	ui16_Un Par;	//датчик
+	ui16_Un ParOld;	//датчик
+	ui16_Un Par;
 } MPU_Struct;
 
 
@@ -65,7 +67,7 @@ typedef struct
 #define RXPTRMAX	7
 #define SEC1		100
 #define BEEPS		3	//короткий BEEP
-#define KEYCNT		15
+#define KEYCNT		20
 #define MODECNT		8000 //@
 
 ui16 Cnt1;			//счетчик периода датчика вращения
@@ -181,11 +183,17 @@ MPU_Struct MPU;
 
 #define ROTPER	500U	//максимальное количество тиков за оборот, если больше то ошибка //250U
 
-bool	flRotUpd;		//требуется обновления индикатора состояния вращения
-bool	flRotOk;		//признак вращения, при поступлении импульса
-bool	flRotOkOld;		//
-bool	flRot1;			//ставим при переходе сигнала от 0 к 1, т.е. при полном обороте
-bool	flRot0;			//признак того, что оборот ещё не засчитан
+
+//bool	flRotOk;		//признак вращения, при поступлении импульса
+//bool	flRotOkOld;		//
+
+ui8		flRot;			//0-черный, 1-зелёный, 2-фон, 255-пропуск
+ui8		flRotOld;
+
+
+//bool	flRotUpd;
+//bool	flRot1;			//ставим при переходе сигнала от 0 к 1, т.е. при полном обороте
+//bool	flRot0;			//признак того, что оборот ещё не засчитан
 ui16	RotVal;
 bool	flRotValUpd;
 bool	flRotUpdEn;
@@ -231,8 +239,8 @@ ui16 SPIBuf[2];
 
 ui8 ProcCount;
 
-#define BEEP_0ff;	    FIO0PIN&=~(1<<23)
-#define BEEP_0n;	    FIO0PIN|=(1<<23)
+#define BEEP_0ff 	    FIO0PIN&=~(1<<23)
+#define BEEP_0n 	    FIO0PIN|=(1<<23)
 
 
 ui16 Debug;
@@ -247,16 +255,17 @@ ui8 InPortOld;						//предыдущее значение
 
 bool flWTR1;
 bool flWTR2;
-bool flGLSDWN;
+bool flDNP;
 
 #define PWTR1		0b00000001		//реле протока 1
 #define PWTR2		0b00010000		//реле протока 2
-#define PGLSDWN		0b00001000		//датчик нижнего положения стекла
+#define PDNP		0b00001000		//датчик нижнего положения стекла
 
 #define PRL		0
 #define PRR		1
-#define PVL		2
+#define PVL10	2
+#define PVL11	3
 
-#define MPUPROC1	10
-#define MPUPROC2	11
+#define MPUPROC1	9				//на индикаторе МПУ будет 10
+#define MPUPROC2	10				//на индикаторе МПУ будет 11 - это максимальный номер
 

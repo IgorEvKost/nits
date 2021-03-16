@@ -11,7 +11,7 @@ Param_Struc encoder(Param_Struc v)
 
     Temp=v.Var;
 
-	Enc=(ui8)FIO2PIN3>>6;               //P2.30, P2.31
+    Enc=(ui8)FIO2PIN3>>6;               //P2.30 - широкий, P2.31-узкий
 
 
 	if(Enc!=3&&fEnc==0)
@@ -26,7 +26,8 @@ Param_Struc encoder(Param_Struc v)
 
 	if(Enc==3&&(fEnc==1||fEnc==2))      //нормальное состояние Enc==3;
 	{
-		if(Enc2>0)
+//		if(Enc2>0)						//почемуто так перестало работать, только возрастание
+		if(Enc1>0)
 		{
 			if(Temp>=v.Min+v.Delta)
 			{
@@ -39,7 +40,8 @@ Param_Struc encoder(Param_Struc v)
 			}
 		}
 
-		if(Enc1>0)
+//		if(Enc1>0)						//почемуто так перестало работать, только возрастание
+		if(Enc2>0)
 		{
 			if(Temp<=v.Max-v.Delta)
 			{
