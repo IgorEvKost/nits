@@ -124,7 +124,7 @@ const ui8 DNP[3]={0xCD,0xCF,0};						//НП
 
 //#20
 
-const ui8 MSGVER[14]={'1','.','0','2','_','1','7','.','0','3','.','2','1',0};
+const ui8 MSGVER[14]={'1','.','0','3','_','2','0','.','0','4','.','2','1',0};
 
 const ui8 MSG0[21]={0xD3,0xD1,0xD2,0xC0,0xCD,0xCE,0xC2,0xCA,0xC0,0x20,\
 					0xCF,0xC0,0xD0,0xC0,0xCC,0xC5,0xD2,0xD0,0xCE,0xC2,0};								//УСТАНОВКА ПАРАМЕТРОВ
@@ -1387,7 +1387,7 @@ int main(void)
 
 		if(key()==0x01&&flKey1==0&&RunMode.Var==28)		//выбор параметра
 		{
-			debug();
+            debug();
 
 			if(ParNum.Var<ParNum.Max)
 			{
@@ -1514,7 +1514,7 @@ int main(void)
 			flKey2=0;
 			flKey4=0;
 			flKey8=0;
-			debug();
+            debug();
 		}
 
 //#1
@@ -1911,20 +1911,20 @@ int main(void)
 
 						case 0:						//получен успешно
 						{
-//							debug();
-							if(MPU.Kvit==1)			//операция выбрана
+ //                         debug();
+                            if(MPU.Kvit==0)			//операция выбрана
 							{
-								set_port(PVL10);	//натекатель операции 10
+                                set_port(PVL11);	//натекатель операции 10 (отжига)
 								MPU.Req=true;
 								MPU.ReqNum=3;
 								MPU.Upd=true;
-								MPU.State=1;			//новое состояние контура управления
+                                MPU.State=1;		//новое состояние контура управления
 								Cnt2=0;
 								Proc=4;
 							}
 							else					//операция не выбрана
 							{
-								Proc=50;
+                                Proc=50;
 							}
 						}
 						break;
@@ -1962,6 +1962,7 @@ int main(void)
 							MPU.ReqNum=3;
 							MPU.Upd=true;
 							Cnt2=0;
+                            MPU.Par.Val=0;
 							Proc=8;					//ожидание готовности
 						}
 						break;
@@ -2633,10 +2634,11 @@ int main(void)
 						case 0:						//получен успешно
 						{
 //							debug();
-							if(MPU.Kvit==1)			//операция выбрана
+                            if(MPU.Kvit==0)			//операция выбрана
 							{
-								res_port(PVL10);	//натекатель процесса 10 выкл
-								set_port(PVL11);	//натекатель процесса 11 вкл.
+//								res_port(PVL10);	//натекатель процесса 10 выкл
+                                set_port(PVL10);	//натекатель процесса 10 выкл
+//								set_port(PVL11);	//натекатель процесса 11 вкл.
 								MPU.Req=true;
 								MPU.ReqNum=3;
 								MPU.Upd=true;
@@ -2680,7 +2682,8 @@ int main(void)
 							MPU.Req=true;
 							MPU.ReqNum=3;
 							Cnt2=0;
-							Proc=24;				//ожидание давления
+                            MPU.Par.Val=0;
+                            Proc=24;				//ожидание давления
 						}
 						break;
 
@@ -2701,7 +2704,7 @@ int main(void)
 			break;
 
 
-			case 24:							//ожидание давления слоя 1
+			case 24:							//ожидание давления слоя 2
 			{
 				if(Cnt2>20)
 				{
@@ -2722,7 +2725,10 @@ int main(void)
 							}
 							else
 							{
-
+								MPU.Req=true;
+								MPU.ReqNum=3;
+								MPU.Upd=true;
+								Cnt2=0;
 							}
 						}
 						break;
@@ -2946,7 +2952,7 @@ int main(void)
 
 			case 246:
 			{
-				if(Cnt2>50)
+                if(Cnt2>50)
 				{
 					BP1=bpm_command(BP1,3,0xFF);		//3-выключить блок ("СТОП")
 
@@ -2990,7 +2996,7 @@ int main(void)
 
 			case 247:
 			{
-				if(Cnt2>50)
+                if(Cnt2>50)
 				{
 					MPU=mpu_set_state(MPU);
 
@@ -3001,7 +3007,7 @@ int main(void)
 							MPU.Req=true;
 							MPU.ReqNum=3;
 							Cnt2=0;
-							Proc=248;				//переключение операции
+                            Proc=2471;				//переключение операции
 						}
 						break;
 
@@ -3019,9 +3025,40 @@ int main(void)
 			}
 			break;
 
+        case 2471:                              //пришлось добавить дубль 247
+        {
+            if(Cnt2>50)
+            {
+                MPU=mpu_set_state(MPU);
+
+                switch (MPU.Error)
+                {
+                    case 0:						//получен успешно
+                    {
+                        MPU.Req=true;
+                        MPU.ReqNum=3;
+                        Cnt2=0;
+                        Proc=248;				//переключение операции
+                    }
+                    break;
+
+                    case 1:						//ошибка кс
+                    case 2:						//ошибка тайм-аут
+                    {
+                        MPU.Req=true;
+                        MPU.ReqNum=3;
+                        MPU.Upd=true;
+                        Cnt2=0;
+                    }
+                    break;
+                }
+            }
+        }
+        break;
+
 			case 248:								//
 			{
-				if(Cnt2>50)
+                if(Cnt2>150)
 				{
 					MPU=mpu_set_op(MPU);
 					switch (MPU.Error)
@@ -3029,17 +3066,17 @@ int main(void)
 						case 0:						//получен успешно
 						{
 //							debug();
-							if(MPU.Kvit==1)			//операция выбрана
+                            if(MPU.Kvit==0)			//операция выбрана
 							{
 								res_port(PVL10);	//отключение натекателей
 								res_port(PVL11);
 								Cnt2=0;
 								rs485();
-								Proc=249;			//остановка вращения
+                                Proc=249;			//остановка вращения
 							}
 							else					//операция не выбрана
 							{
-								Proc=50;
+                                Proc=50;
 							}
 						}
 						break;
