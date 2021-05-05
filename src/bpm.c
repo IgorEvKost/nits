@@ -400,7 +400,7 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 
 	if(s.Rsp)
 	{
-		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
 		{
 #ifdef MODBUS
 			ui16_Un Crc;
@@ -408,7 +408,9 @@ BPM_Struc bpm_set_point(BPM_Struc s)
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
 
-			Crc.Val=crc16(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+			RxBuf[0]=TxBuf[0];
+
+			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 
 //			RxBuf[9]=Crc.b[0];
 //			RxBuf[11]=Crc.b[1];
@@ -564,10 +566,13 @@ BPM_Struc bpm_get_stat(BPM_Struc s)
 		{
 			ui16_Un Crc;
 
+			RxBuf[0]=TxBuf[0];
+
 			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 
 			RxBuf[9]=Crc.b[0];
 			RxBuf[10]=Crc.b[1];
+			RxBuf[11]=RxByteNum;
 
 //			Debug=1;
 
@@ -680,7 +685,7 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 
 	if(s.Rsp)
 	{
-		if(RxByteNum==RxByteWait)			//отслеживаем, когда придет всё
+		if(RxByteNum>=RxByteWait)			//отслеживаем, когда придет всё
 		{
 #ifdef MODBUS
 			ui16_Un Crc;
@@ -688,12 +693,14 @@ BPM_Struc bpm_get_data(BPM_Struc s, ui8 n)	// для уставок n=0, для 
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
 
-			Crc.Val=crc16(RxByteNum-2,RxBuf);		//отсекаем два байта кс
+			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 
 //			RxBuf[9]=Crc.b[0];
 //			RxBuf[11]=Crc.b[1];
 
 //			Debug=1;
+
+			RxBuf[0]=TxBuf[0];
 
 			if(Crc.b[0]==RxBuf[RxByteWait-2])// && Crc.b[1]==RxBuf[RxByteWait-1])
 			{
@@ -867,6 +874,8 @@ BPM_Struc bpm_command(BPM_Struc s, ui8 cmd, ui8 data)
 
 //			RxBuf[8]=RxBuf[6];
 //			RxBuf[10]=RxBuf[7];
+
+			RxBuf[0]=TxBuf[0];
 
 			Crc.Val=crc16(RxByteWait-2,RxBuf);		//отсекаем два байта кс
 

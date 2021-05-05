@@ -90,7 +90,8 @@
 #define STSPROC 50,2
 #define STSBP	200,2
 #define SMSG0	30,420				//строка УСТАНОВКА ПАРАМЕТРОВ
-#define SMSG1	190,420				//строка ОЧИСТКА
+#define SMSG10	190,420				//строка ОТЖИГ 1
+#define SMSG1	190,420				//строка ОТЖИГ 2
 #define SMSG2	150,420				//строка ОЖИДАНИЕ
 #define SMSG3	150,420				//строка НАНЕСЕНИЕ СЛОЯ
 #define SMSG4	150,420				//строка ИЗМЕРЕНИЕ
@@ -124,11 +125,12 @@ const ui8 DNP[3]={0xCD,0xCF,0};						//НП
 
 //#20
 
-const ui8 MSGVER[14]={'1','.','0','3','_','2','0','.','0','4','.','2','1',0};
+const ui8 MSGVER[14]={'1','.','0','9','_','0','5','.','0','5','.','2','1',0};
 
 const ui8 MSG0[21]={0xD3,0xD1,0xD2,0xC0,0xCD,0xCE,0xC2,0xCA,0xC0,0x20,\
 					0xCF,0xC0,0xD0,0xC0,0xCC,0xC5,0xD2,0xD0,0xCE,0xC2,0};								//УСТАНОВКА ПАРАМЕТРОВ
-const ui8 MSG1[8]={0xCE,0xD7,0xC8,0xD1,0xD2,0xCA,0xC0,0};												//ОЧИСТКА
+const ui8 MSG1[8]={0xCE,0xD2,0xC6,0xC8,0xC3,0x20,0x31,0};												//ОТЖИГ 1
+const ui8 MSG10[8]={0xCE,0xD2,0xC6,0xC8,0xC3,0x20,0x32,0};												//ОТЖИГ 2
 const ui8 MSG2[9]={0xCE,0xC6,0xC8,0xC4,0xC0,0xCD,0xC8,0xC5,0};											//ОЖИДАНИЕ
 const ui8 MSG3[15]={0xCD,0xC0,0xCD,0xC5,0xD1,0xC5,0xCD,0xC8,0xC5,0x20,0xD1,0xCB,0xCE,0xDF,0};			//НАНЕСЕНИЕ СЛОЯ
 const ui8 MSG4[10]={0xC8,0xC7,0xCC,0xC5,0xD0,0xC5,0xCD,0xC8,0xC5,0};									//ИЗМЕРЕНИЕ
@@ -259,9 +261,9 @@ int main(void)
 //#19
 
 	Param_Struc RunMode={false,1,1,1,1,3,""};
-	Param_Struc ParNum={false,1,1,1,1,NUMPAR,""};				//селектор параметра для коррекции
+	Param_Struc ParNum={false,1,1,1,1,NUMPAR,""};			//селектор параметра для коррекции
 
-	Param_Struc P1P={false,10,0,0,0,500,""};
+	Param_Struc P1P={false,1,0,0,0,500,""};					//верхний допуск P1
 	if(P1PVar>P1P.Max)
 	{
 		P1PVar=0;
@@ -269,7 +271,7 @@ int main(void)
 	P1P.Var=P1PVar;
 	P1P.VarOld=P1P.Var;
 
-	Param_Struc P1M={false,10,0,0,0,500,""};
+	Param_Struc P1M={false,1,0,0,0,500,""};					//нижний допуск P1
 	if(P1MVar>P1M.Max)
 	{
 		P1MVar=0;
@@ -277,7 +279,7 @@ int main(void)
 	P1M.Var=P1MVar;
 	P1M.VarOld=P1M.Var;
 
-	Param_Struc P1={false,10,0,0,0,2047,""};
+	Param_Struc P1={false,1,0,0,0,2047,""};					//P1
 
 	if(P1Var>P1.Max)
 	{
@@ -286,7 +288,7 @@ int main(void)
 	P1.Var=P1Var;
 	P1.VarOld=P1.Var;
 
-	Param_Struc P2P={false,10,0,0,0,500,""};
+	Param_Struc P2P={false,1,0,0,0,500,""};					//верхний допуск P2
 	if(P2PVar>P2P.Max)
 	{
 		P2PVar=0;
@@ -294,7 +296,7 @@ int main(void)
 	P2P.Var=P2PVar;
 	P2P.VarOld=P2P.Var;
 
-	Param_Struc P2M={false,10,0,0,0,500,""};
+	Param_Struc P2M={false,1,0,0,0,500,""};					//нижний допуск P2
 	if(P2MVar>P2M.Max)
 	{
 		P2MVar=0;
@@ -302,7 +304,7 @@ int main(void)
 	P2M.Var=P2MVar;
 	P2M.VarOld=P2M.Var;
 
-	Param_Struc P2={false,10,0,0,0,2047,""};
+	Param_Struc P2={false,1,0,0,0,2047,""};					//P2
 
 	if(P2Var>P2.Max)
 	{
@@ -325,7 +327,7 @@ int main(void)
 	I1.Var=I1Var;
 	I1.VarOld=I1.Var;
 
-	Param_Struc I2={false,2,0,0,0,204,""};			//ток процесса
+	Param_Struc I2={false,2,0,0,0,204,""};				//ток процесса
 
 	if(I2Var>I2.Max)
 	{
@@ -335,7 +337,7 @@ int main(void)
 	I2.Var=I2Var;
 	I2.VarOld=I2.Var;
 
-	Param_Struc TP={false,1,0,0,0,3600,""};				//ожидание давления
+	Param_Struc TP={false,10,0,0,0,3600,""};			//ожидание давления
 
 	if(TPVar>TP.Max)
 	{
@@ -345,7 +347,7 @@ int main(void)
 	TP.Var=TPVar;
 	TP.VarOld=TP.Var;
 
-	Param_Struc T1={false,1,0,0,0,3600,""};			//время отпыла на задвижку
+	Param_Struc T1={false,10,0,0,0,3600,""};			//время отпыла на задвижку
 
 	if(T1Var>T1.Max)
 	{
@@ -355,7 +357,7 @@ int main(void)
 	T1.Var=T1Var;
 	T1.VarOld=T1.Var;
 
-	Param_Struc T2={false,1,0,0,0,3600,""};			//время процесса (максимальное)
+	Param_Struc T2={false,10,0,0,0,3600,""};			//время процесса (максимальное)
 
 	if(T2Var>T2.Max)
 	{
@@ -609,6 +611,9 @@ int main(void)
 				flWTR1=true;
 				flWTR2=true;
 				flDNP=true;
+
+                flRotOld=255;
+                flRot=0;
 
 //				flRot=flRotOld;
 
@@ -1387,7 +1392,7 @@ int main(void)
 
 		if(key()==0x01&&flKey1==0&&RunMode.Var==28)		//выбор параметра
 		{
-            debug();
+ //           debug();
 
 			if(ParNum.Var<ParNum.Max)
 			{
@@ -1450,7 +1455,9 @@ int main(void)
 			btn_START.b_w=2;
 			MsgIdNew=255;
 			RunMode.Var=0; //@
-			Proc=10;
+            rs485();
+            Cnt2=0;
+            Proc=10;
 		}
 
 		if(key()==0x01&&(RunMode.Var==34||RunMode.Var==304))	//PAUSE в зелёной рамке
@@ -1514,7 +1521,7 @@ int main(void)
 			flKey2=0;
 			flKey4=0;
 			flKey8=0;
-            debug();
+//            debug();
 		}
 
 //#1
@@ -1736,7 +1743,7 @@ int main(void)
 						{
 							BP1.TmrReq=false;
 							BP1.Req=true;			//разрешаем повторные запросы
-							Cnt2=80;
+							Cnt2=0;
 						}
 
 
@@ -1757,10 +1764,10 @@ int main(void)
 			{
 				if(fl485)
 				{
-					res_port(0);
-					res_port(1);
-					res_port(2);
-					res_port(4);
+//					res_port(0);					//это PRF отключаем в Proc=14
+//					res_port(1);					//это PRS отключаем в Proc=14
+//					res_port(2);
+//					res_port(3);
 
 					BP1.ReqNum=3;
 					BP1.Req=true;
@@ -1794,8 +1801,9 @@ int main(void)
 						}
 						if(BP1.Error==2)			//отсутствует ответ блока
 						{
-							RunMode.Var=1;
-							Proc=0;
+//							RunMode.Var=1;
+//							Proc=0;
+							Proc=13;				//на проверку вращения
 						}
 
 						if(BP1.TmrReq)				//
@@ -1808,8 +1816,9 @@ int main(void)
 				}
 				else
 				{
-					RunMode.Var=1;
-					Proc=0;
+//					RunMode.Var=1;
+//					Proc=0;
+					Proc=13;
 				}
 			}
 			break;
@@ -1822,8 +1831,9 @@ int main(void)
 
 					if(BP1.Error==0 || BP1.Error==1 || BP1.Error==2)
 					{
-						RunMode.Var=1;
-						Proc=0;
+//						RunMode.Var=1;
+//						Proc=0;
+						Proc=13;				//на проверку вращения
 					}
 
 					if(BP1.TmrReq)
@@ -1836,6 +1846,135 @@ int main(void)
 			}
 			break;
 
+			case 13:								//остановка, если было включено вращение
+			{
+				if(flRot==1)
+				{
+					set_port(PRS);					//замедляемся
+					Cnt2=0;
+					Proc=14;
+				}
+				else							//вращение не было включено
+				{
+					Cnt2=0;
+					Proc=15;
+				}
+			}
+			break;
+
+			case 14:							//время для замедления
+			{
+				if(Cnt2>700)
+				{
+					if((InPort&PDNP)==PDNP)		//сработал датчик нижнего положения
+					{
+						res_port(PRF);			//вращение отключено
+						flRot=0;
+						Cnt2=0;
+						Proc=15;
+					}
+				}
+
+			}
+			break;
+
+			case 15:
+			{
+				if(Cnt2>50)
+				{
+					res_port(PRS);				//скорость на быструю
+					res_port(PVL10);			//сброс портов натекателей
+					res_port(PVL11);
+
+					rs232();
+					MPU.Proc=MPU.ProcOld;			//восстановление номера операции МПУ
+					MPU.State=0;
+					Cnt2=0;
+					Proc=16;					//возврат МПУ в исходное состояние
+				}
+			}
+			break;
+
+
+			case 16:
+			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_set_state(MPU);			//отключение контура управление МПУ
+
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							Cnt2=0;
+							Proc=18;				//переключение операции
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+							Proc=18;
+						}
+						break;
+					}
+				}
+			}
+			break;
+
+
+			case 18:								//
+			{
+				if(Cnt2>150)
+				{
+					MPU=mpu_set_op(MPU);
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							if(MPU.Kvit==0)			//операция выбрана
+							{
+								Cnt2=0;
+								Proc=19;			//выход
+							}
+							else					//операция не выбрана
+							{
+								Proc=50;
+							}
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+//							debug();
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+							Proc=19;
+						}
+						break;
+					}
+				}
+
+			}
+			break;
+
+
+			case 19:
+			{
+				rs485();
+				RunMode.Var=1;
+				Proc=0;
+			}
+
 
 
 			//
@@ -1844,25 +1983,31 @@ int main(void)
 
 			case 1:											//установка стекла в нижнее положение
             {
-			//опрос датчика нижнего положения
+                if((InPort&PDNP)==PDNP)		//сработал датчик нижнего положения
+                {
+                    flRot=0;
+                    res_port(PRF);
+                    res_port(PRS);
 
-			//если не внизу, то
-
-					//включаем привод
-
-			//если внизу, то привод выключаем
-				if(fl485)
-				{
-					rs232();
-				}
-				else
-				{
-					MPU.Req=true;
-					MPU.ReqNum=3;
-					MPU.Upd=true;
-					Cnt2=0;
-					Proc=2;
-				}
+                    if(fl485)
+                    {
+                        rs232();
+                    }
+                    else
+                    {
+                        MPU.Req=true;
+                        MPU.ReqNum=3;
+                        MPU.Upd=true;
+                        Cnt2=0;
+                        Proc=2;
+                    }
+                }
+                else
+                {
+                   flRot=1;                     //индикатор вращения
+                   set_port(PRS);               //медленно
+                   set_port(PRF);               //вращаем
+                }
             }
             break;
 
@@ -1997,7 +2142,7 @@ int main(void)
 							if((MPU.Par.Val>=P1.Var-P1M.Var) && (MPU.Par.Val<=P1.Var+P1P.Var))
 							{
 								rs485();
-								MsgIdNew=1;			//ОЧИСТКА
+								MsgIdNew=1;			//ОТЖИГ 1
 								Proc=9;				//задержка для переходных процессов по давлению
 							}
 							else
@@ -2069,7 +2214,8 @@ int main(void)
 			{
 				if(Cnt2>20)								//задержка (в тиках Tmr0) при переходе
 				{
-					BP1=bpm_command(BP1,0,~(SWC|ON|LEV1|LEV2));	//уст. ур. защиты, реж. стаб., выкл., коммутац.
+//					BP1=bpm_command(BP1,0,~(SWC|ON|LEV1|LEV2));	//уст. ур. защиты, реж. стаб., выкл., коммутац.
+                    BP1=bpm_command(BP1,0,~(ON|LEV1|LEV2));	//уст. ур. защиты, реж. стаб., выкл., коммутац.
 					if(BP1.Error==0)
 					{
 						BP1.Req=true;					//разрешаем запрос
@@ -2374,37 +2520,251 @@ int main(void)
 				}
 				else
 				{
-					set_port(PRL);					//включаем вращение
-					flRot=1;						//зелёный
-					Timer1.Val=T1.Var;				//длительность слоя 1
+					Timer1.Val=T1.Var;				//длительность отпыла на реактивном газе
 					SecCnt=SEC1;					//интервал 1 секунда
 					Timer1.On=true;					//включение отсчета
 
 					BP1.Req=true;
 					Cnt2=0;
-					MsgIdNew=3;						//НАНЕСЕНИЕ СЛОЯ
-					Proc=233;
+					Proc=2320;					//отключение блока
 				}
 
 			}
 			break;
 
+			case 2320:							//
+			{
+				if(Cnt2>20)
+				{
+					BP1.Par.Val=0;				//блок отключаем по уставке
+
+					BP1=bpm_set_point(BP1);
+
+					if(BP1.Error==0)
+					{
+						rs232();				//далее обращаемся с МПУ
+						MPU.Proc=MPUPROC2;		//операция 11
+						MPU.State=0;			//отключаем контур
+						MPU.Req=true;
+						MPU.ReqNum=3;
+						MsgIdNew=2;				//ОЖИДАНИЕ
+						Proc=2330;				//отключение контура
+					}
+					else
+					{
+						if(BP1.Error==1)
+						{
+							BP1.Req=true;			//разрешаем запрос
+							BP1.ReqNum=3;
+							Cnt2=0;
+						}
+						else
+						{
+							if(BP1.Error==2)
+							{
+								MsgIdNew=9;
+								Proc=0;
+							}
+						}
+					}
+
+					if(BP1.TmrReq)
+					{
+						BP1.TmrReq=false;
+						BP1.Req=true;			//разрешаем повторные запросы
+						Cnt2=0;
+					}
+				}
+			}
+			break;
+
+			case 2330:								//отключаем контур
+			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_set_state(MPU);
+
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							Cnt2=0;
+							Proc=2340;				//переключение операции
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+//							debug();
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
+
+			}
+			break;
+
+			case 2340:								//переключение МПУ в операцию 11
+			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_set_op(MPU);
+
+					switch (MPU.Error)
+					{
+
+						case 0:						//получен успешно
+						{
+//							debug();
+							if(MPU.Kvit==0)			//операция выбрана
+							{
+//								res_port(PVL10);	//натекатель процесса 10 выкл
+								set_port(PVL10);	//натекатель процесса 10 выкл
+//								set_port(PVL11);	//натекатель процесса 11 вкл.
+								MPU.Req=true;
+								MPU.ReqNum=3;
+								MPU.Upd=true;
+								MPU.State=1;		//включить контур
+								Cnt2=0;
+								Proc=2350;			//на включение контура
+							}
+							else					//операция не выбрана
+							{
+								Proc=50;
+							}
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+//							debug();
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
+
+			}
+			break;
+
+			case 2350:								//включаем контур
+			{
+				if(Cnt2>50)
+				{
+					MPU=mpu_set_state(MPU);
+
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							Cnt2=0;
+							MPU.Par.Val=0;
+							Proc=2360;				//ожидание давления
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+//							debug();
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
+
+			}
+			break;
+
+			case 2360:								//ожидание давления реактивного газа
+			{
+				if(Cnt2>20)
+				{
+					MPU=mpu_get_par(MPU);
+//					debug();
+					switch (MPU.Error)
+					{
+						case 0:						//получен успешно
+						{
+							if((MPU.Par.Val>=P2.Var-P2M.Var) && (MPU.Par.Val<=P2.Var+P2P.Var))
+							{
+								rs485();
+								BP1.Req=true;
+								BP1.ReqNum=3;
+								Cnt2=0;
+								MsgIdNew=10;		//ОТЖИГ 2
+								Proc=2370;			//задержка на переходные процессы
+							}
+							else
+							{
+								MPU.Req=true;
+								MPU.ReqNum=3;
+								MPU.Upd=true;
+								Cnt2=0;
+							}
+						}
+						break;
+
+						case 1:						//ошибка кс
+						case 2:						//ошибка тайм-аут
+						{
+							MPU.Req=true;
+							MPU.ReqNum=3;
+							MPU.Upd=true;
+							Cnt2=0;
+						}
+						break;
+					}
+				}
+			}
+			break;
+
+			case 2370:
+			{
+				if(Cnt2>800)
+				{
+					Proc=233;						//на включение блока питания
+				}
+			}
+			break;
+
+
+
+
+
+
 
 			/******************************************
-			*			  РАБОЧИЙ СЛОЙ 1
+			*	  ОТПЫЛ НА РЕАКТИВНОМ ГАЗЕ
 			*******************************************/
 
 			case 233:							//
 			{
 				if(Cnt2>20)
 				{
-					BP1.Par.Val=I1.Var;				//блок не отключаем, загружаем уставку
+					BP1.Par.Val=I2.Var;			//загружаем уставку отпыла на реактивном газе, она же и на рабочем слое
 
 					BP1=bpm_set_point(BP1);
 
 					if(BP1.Error==0)
 					{
-						Proc=234;				//контроль рабочих уставок I
+						Proc=234;				//контроль уставок I2
 						BP1.Req=true;			//разрешаем запрос
 						Cnt2=0;
 					}
@@ -2436,7 +2796,7 @@ int main(void)
 			}
 			break;
 
-			case 234:							//контроль рабочих уставок I1
+			case 234:							//контроль уставок I2
 			{
 				if(Cnt2>20)
 				{
@@ -2481,7 +2841,7 @@ int main(void)
 			break;
 
 
-			case 235:							//вращение включено, контролируем давление и время
+			case 235:							//вращение отключено, контролируем давление и время
 			{
 				if(Cnt2>50)
 				{
@@ -2490,14 +2850,14 @@ int main(void)
 					{
 						case 0:						//получен успешно
 						{
-							if((MPU.Par.Val>=P1.Var-P1M.Var) && (MPU.Par.Val<=P1.Var+P1P.Var))
-							{
+//							if((MPU.Par.Val>=P1.Var-P1M.Var) && (MPU.Par.Val<=P1.Var+P1P.Var))
+//							{
 								Proc=236;			//контроль таймера
-							}
-							else
-							{
-								Proc=50;			//выход за пределы давления!
-							}
+//							}
+//							else
+//							{
+//								Proc=50;			//выход за пределы давления!
+//							}
 						}
 						break;
 
@@ -2516,7 +2876,7 @@ int main(void)
 			{
 				if(Timer1.Val==0)
 				{
-					Proc=237;					//слой готов, выходим по таймеру
+					Proc=237;					//отпыл закончили, выходим по таймеру
 				}
 				else
 				{
@@ -2536,10 +2896,11 @@ int main(void)
 				BP1.Req=true;			//разрешаем повторные запросы
 				Cnt2=0;
 
-				Proc=238;
+//				Proc=238;
+				Proc=242;
 			}
 			break;
-
+//VVVVVV
 			case 238:
 			{
 				if(Cnt2>20)
@@ -2587,7 +2948,7 @@ int main(void)
 			break;
 
 		/******************************************
-		*			  РАБОЧИЙ СЛОЙ 2
+		*			  РАБОЧИЙ СЛОЙ
 		*******************************************/
 			case 2391:								//отключаем контур
 			{
@@ -2805,7 +3166,7 @@ int main(void)
             }
             break;
 
-
+//^^^^^^^^
 			case 242:								//контроль рабочих уставок I2
 			{
 				if(Cnt2>20)
@@ -2819,6 +3180,9 @@ int main(void)
 						Timer1.Val=T2.Var;			//длительность слоя 2
 						SecCnt=SEC1;				//интервал 1 секунда
 						Timer1.On=true;				//включение отсчета
+						set_port(PRF);				//включение вращения
+						flRot=1;					//индикатор вращения
+						MsgIdNew=3;					//НАНЕСЕНИЕ СЛОЯ
 						Cnt2=0;
 						Proc=243;					//контроль таймера слоя 2
 					}
@@ -2859,14 +3223,14 @@ int main(void)
 					{
 						case 0:						//получен успешно
 						{
-							if((MPU.Par.Val>=P2.Var-P2M.Var) && (MPU.Par.Val<=P2.Var+P2P.Var))
-							{
+//							if((MPU.Par.Val>=P2.Var-P2M.Var) && (MPU.Par.Val<=P2.Var+P2P.Var))
+//							{
 								Proc=244;			//контроль таймера слоя 2
-							}
-							else
-							{
+//							}
+//							else
+//							{
 
-							}
+//							}
 						}
 						break;
 
@@ -2907,7 +3271,7 @@ int main(void)
 			case 245:									//уставку блока на 0
 			{
 
-				if(Cnt2>20)
+                if(Cnt2>80)
 				{
 					BP1.Par.Val=0;					//
 
@@ -3072,7 +3436,8 @@ int main(void)
 								res_port(PVL11);
 								Cnt2=0;
 								rs485();
-                                Proc=249;			//остановка вращения
+								set_port(PRS);		//включаем замедление
+								Proc=2481;			//на контроль парковки
 							}
 							else					//операция не выбрана
 							{
@@ -3097,21 +3462,59 @@ int main(void)
 			}
 			break;
 
-			case 249:								//остановка вращения
+			case 2481:
 			{
-				if(1)								//сработал датчик нижнего положения
+				if(Cnt2>900)
 				{
-					res_port(PRL);					//вращение отключено
-					flRot=0;						//черн.
-					BP1.TmrReq=false;
-					BP1.Req=true;
-					Cnt2=0;
-					Proc=250;
+					if((InPort&PDNP)==PDNP)				//если отключение вращение попало на нижнее положение
+					{									//то текущий оборот пропускаем
+						Proc=2482;
+						Cnt2=0;
+					}
+					else
+					{
+						Proc=249;
+					}
 				}
 			}
 			break;
 
+			case 2482:
+			{
+				if(Cnt2>10)
+				{
+					if((InPort&PDNP)==0)
+					{
+						Proc=249;
+					}
+				}
+			}
+			break;
 
+			case 249:								//остановка вращения
+			{
+				if((InPort&PDNP)==PDNP)				//сработал датчик нижнего положения
+				{
+					res_port(PRF);					//отключаем вращение
+					flRot=0;						//черн.
+					BP1.TmrReq=false;
+					BP1.Req=true;
+					Cnt2=0;
+					Proc=2491;
+				}
+			}
+			break;
+
+			case 2491:
+			{
+				if(Cnt2>100)
+				{
+					res_port(PRS);					//скорость на быструю
+					Proc=250;
+					Cnt2=0;
+				}
+			}
+			break;
 
 			case 250:
 			{
@@ -3453,7 +3856,8 @@ int main(void)
 		}
 
 		//индикатор включения вращения
-		if(flRot!=255)
+//		if(flRot!=255)
+		if(flRot!=flRotOld)
 		{
 			switch(flRot)
 			{
@@ -3467,7 +3871,7 @@ int main(void)
 				break;
 			}
 			flRotOld=flRot;
-			flRot=255;
+//			flRot=255;
 		}
 
 //#9
@@ -3556,7 +3960,10 @@ int main(void)
 				case 0:	DrawString(SMSG0,&fnt30,MSG0,BackColour);	//УСТАНОВКА ПАРАМЕТРОВ
 				break;
 
-				case 1:	DrawString(SMSG1,&fnt30,MSG1,BackColour);	//ОЧИСТКА
+				case 1:	DrawString(SMSG1,&fnt30,MSG1,BackColour);	//ОТЖИГ 1
+				break;
+
+				case 10:DrawString(SMSG10,&fnt30,MSG10,BackColour);	//ОТЖИГ 2
 				break;
 
 				case 2:	DrawString(SMSG2,&fnt30,MSG2,BackColour);	//ОЖИДАНИЕ
@@ -3588,7 +3995,7 @@ int main(void)
 					DrawString(SMSG8,&fnt30,MSG8,BackColour);		//ПО ВРАЩЕНИЮ
 				}
 
-				case 9: DrawString(SMSG9,&fnt30,MSG9,BackColour);		//НЕТ СВЯЗИ С БП
+				case 9: DrawString(SMSG9,&fnt30,MSG9,BackColour);	//НЕТ СВЯЗИ С БП
 				break;
 
 				default:
@@ -3600,7 +4007,10 @@ int main(void)
 				case 0:	DrawString(SMSG0,&fnt30,MSG0,MSGCOLOR);		//УСТАНОВКА ПАРАМЕТРОВ
 				break;
 
-				case 1:	DrawString(SMSG1,&fnt30,MSG1,MSGCOLOR);		//ОЧИСТКА
+				case 1:	DrawString(SMSG1,&fnt30,MSG1,MSGCOLOR);		//ОТЖИГ 1
+				break;
+
+				case 10:DrawString(SMSG10,&fnt30,MSG10,MSGCOLOR);	//ОТЖИГ 2
 				break;
 
 				case 2:	DrawString(SMSG2,&fnt30,MSG2,MSGCOLOR);		//ОЖИДАНИЕ
@@ -3644,7 +4054,6 @@ int main(void)
 
 
 		InPort=rd_port();
-//		debug();
 		if((InPort&PWTR1)!=(InPortOld&PWTR1))
 		{
 			flWTR1=true;
@@ -3988,13 +4397,13 @@ void rs485()
 
 void debug()
 {
-//	RegionFill(8,360,480,30,BackColour);
+	RegionFill(8,360,480,30,BackColour);
 
-	RegionFill(8,360,48,30,BackColour);
+//	RegionFill(8,360,48,30,BackColour);
 
 	xsprintf(buffer,"%02x", RxBuf[0]);
 	DrawString(10,370,&fnt20,buffer,WHITE);
-/*
+
 	xsprintf(buffer,"%02x", RxBuf[1]);
 	DrawString(40,370,&fnt20,buffer,WHITE);
 
@@ -4031,7 +4440,7 @@ void debug()
 	xsprintf(buffer,"%02x", RxBuf[12]);
 	DrawString(370,370,&fnt20,buffer,WHITE);
 
-*/
+
 
 //	xsprintf(buffer,"%02x", InPortOld);
 //	DrawString(370,370,&fnt20,buffer,WHITE);

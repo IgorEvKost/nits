@@ -32,12 +32,23 @@
 //	return ~res;
 //}
 
+volatile	ui8 tport;
+volatile	ui8 tport2;
+
 ui8 rd_port()
 {
-	ui8 t;
+//volatile	ui8 t;
 
-	t=FIO3PIN2;
-	return ~t;
+    tport2=FIO3PIN2;
+    if((tport2&PDNP)==PDNP)
+    {
+        tport=tport2&(~PDNP);
+    }
+    else
+    {
+        tport=tport2|PDNP;
+    }
+	return ~tport;
 }
 
 void set_port(ui8 data)					//номер порта

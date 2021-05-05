@@ -261,8 +261,8 @@ bool flDNP;
 #define PWTR2		0b00010000		//реле протока 2
 #define PDNP		0b00001000		//датчик нижнего положения стекла
 
-#define PRL		0
-#define PRR		1
+#define PRF		0
+#define PRS		1
 #define PVL10	2
 #define PVL11	3
 
